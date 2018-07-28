@@ -1,4 +1,4 @@
-package jp.ac.kyoto_su.tamadalab.heatmapper;
+package jp.ac.kyoto_su.tamadalab.heatman;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +22,9 @@ public class Arguments {
 
     @Option(name="-p", aliases="--pixel", metaVar="PIXEL", usage="specifies a pixel size of result image.")
     private String pixel = "1";
+
+    @Option(name="-g", aliases="--gray", help=true, usage="output the grayscaled heatmap image.")
+    private boolean gray;
 
     @Option(name="-H", aliases="--help", help=true, usage="print this message.")
     private boolean help;
@@ -60,6 +63,10 @@ public class Arguments {
 
     public Optional<Integer> width(){
         return toInteger(width);
+    }
+
+    public ColorMapper colorMapper() {
+        return ColorMapperBuilder.build(gray);
     }
 
     private Optional<Integer> toInteger(String number) {

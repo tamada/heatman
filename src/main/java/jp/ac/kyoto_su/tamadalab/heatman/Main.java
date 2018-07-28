@@ -1,4 +1,4 @@
-package jp.ac.kyoto_su.tamadalab.heatmapper;
+package jp.ac.kyoto_su.tamadalab.heatman;
 
 import java.io.IOException;
 

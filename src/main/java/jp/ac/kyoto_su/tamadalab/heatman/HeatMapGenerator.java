@@ -1,6 +1,5 @@
-package jp.ac.kyoto_su.tamadalab.heatmapper;
+package jp.ac.kyoto_su.tamadalab.heatman;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -10,9 +9,9 @@ import java.util.Optional;
 
 import javax.imageio.ImageIO;
 
-public class HeatMapGenerator {
-    private static final Color OPAQUE = new Color(255, 0, 0, 0);
+import jp.ac.kyoto_su.tamadalab.heatman.entities.DataTable;
 
+public class HeatMapGenerator {
     private BufferedImage image;
 
     public HeatMapGenerator(String dataFile, Arguments args) {
@@ -29,7 +28,7 @@ public class HeatMapGenerator {
         Dimension dim = table.size();
         Integer scale = args.pixel().orElse(1);
         BufferedImage image = new BufferedImage(scale * (dim.width + 1), scale * (dim.height + 1), BufferedImage.TYPE_INT_ARGB);
-        paint(table, image.createGraphics(), dim, scale);
+        paint(table, image.createGraphics(), dim, scale, args.colorMapper());
 
         BufferedImage dest = new BufferedImage(args.width().orElse(image.getWidth()),
                 args.height().orElse(image.getHeight()), BufferedImage.TYPE_INT_ARGB);
@@ -37,22 +36,13 @@ public class HeatMapGenerator {
         return dest;
     }
 
-    private void paint(DataTable table, Graphics2D g, Dimension dim, Integer pixelSize) {
+    private void paint(DataTable table, Graphics2D g, Dimension dim, Integer pixelSize, ColorMapper mapper) {
         for (int i = 0; i < dim.width; i++) {
             for (int j = 0; j < dim.height; j++) {
                 Optional<Double> value = table.get(i, j);
-                g.setColor(color(value));
+                g.setColor(mapper.map(value));
                 g.fillRect(i * pixelSize, j * pixelSize, pixelSize, pixelSize);
             }
         }
-    }
-
-    private Color color(Optional<Double> value) {
-        return value.map(number -> color(number)).orElse(OPAQUE);
-    }
-
-    private Color color(Double value) {
-        float result = (float)(((1 - value) * 240) / 360);
-        return Color.getHSBColor(result, 1f, 1f);
     }
 }
