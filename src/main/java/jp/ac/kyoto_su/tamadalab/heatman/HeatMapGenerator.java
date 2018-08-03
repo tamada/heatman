@@ -27,7 +27,7 @@ public class HeatMapGenerator {
     private BufferedImage createImage(DataTable table, Arguments args) {
         Dimension dim = table.size();
         Integer scale = args.pixel().orElse(1);
-        BufferedImage image = new BufferedImage(scale * (dim.width + 1), scale * (dim.height + 1), BufferedImage.TYPE_INT_ARGB);
+        BufferedImage image = new BufferedImage(scale * dim.width, scale * dim.height, BufferedImage.TYPE_INT_ARGB);
         paint(table, image.createGraphics(), dim, scale, args.colorMapper());
 
         BufferedImage dest = new BufferedImage(args.width().orElse(image.getWidth()),

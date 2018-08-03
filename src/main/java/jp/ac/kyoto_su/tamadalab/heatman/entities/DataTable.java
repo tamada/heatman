@@ -23,6 +23,7 @@ public class DataTable {
     }
 
     public Dimension size() {
+        // System.out.printf("table: %d, %d, labels: (%d, %d)%n", table.column(), table.row(), labels.xlabels().count(), labels.ylabels().count());
         return new Dimension(table.column(), table.row());
     }
 
