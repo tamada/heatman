@@ -2,7 +2,7 @@ package jp.ac.kyoto_su.tamadalab.heatman;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.BiConsumer;
 
 import org.kohsuke.args4j.Argument;
@@ -11,22 +11,25 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 public class Arguments {
-    @Option(name="-o", aliases="--output", metaVar="DEST.FILE", usage="destination image file.")
-    private String output = "heatmap.png";
+    @Option(name="-o", aliases="--output", metaVar="DEST.FILE", usage="destination image file.  The format of image is guessed from its extension.")
+    private String output = "heatman.png";
 
-    @Option(name="-w", aliases="--width", metaVar="WIDTH", usage="specifies width of resultant image.")
-    private String width;
+    // @Option(name="-w", aliases="--width", metaVar="WIDTH", usage="specifies width of resultant image.")
+    // private String width;
 
-    @Option(name="-h", aliases="--height", metaVar="HEIGHT", usage="specifies height of resultant image.")
-    private String height;
+    // @Option(name="-h", aliases="--height", metaVar="HEIGHT", usage="specifies height of resultant image.")
+    // private String height;
 
     @Option(name="-p", aliases="--pixel", metaVar="PIXEL", usage="specifies a pixel size of result image.")
-    private String pixel = "1";
+    private int pixel = 1;
+
+    @Option(name="-a", aliases="--auxiliary", metaVar="INTERVAL", usage="specifies a interval of auxiliary lines. If this value is less than equal to 0, no auxilirary lines are drawn.")
+    private int auxiliary = 0;
 
     @Option(name="-g", aliases="--gray", usage="output the grayscaled heatmap image.")
     private boolean gray = false;
     
-    @Option(name="-s", aliases="--scaler", usage="output scaler image.")
+    @Option(name="-s", aliases="--scaler", usage="output the scaler image. If this option is specified, given data files are ignored.")
     private boolean outputScaler = false;
 
     @Option(name="-H", aliases="--help", usage="print this message.")
@@ -50,6 +53,12 @@ public class Arguments {
             args.forEach(arg -> action.accept(arg, this));
     }
 
+    public OptionalInt auxiliraryStep() {
+        if(auxiliary <= 0)
+            return OptionalInt.empty();
+        return OptionalInt.of(auxiliary);
+    }
+
     public boolean isOutputScaler() {
         return !help && outputScaler;
     }
@@ -58,25 +67,20 @@ public class Arguments {
         return output;
     }
 
-    public Optional<Integer> pixel(){
-        return toInteger(pixel);
+    public int pixel(){
+        return pixel;
     }
 
-    public Optional<Integer> height(){
-        return toInteger(height);
-    }
-
-    public Optional<Integer> width(){
-        return toInteger(width);
-    }
+//    public Optional<Integer> height(){
+//        return toInteger(height);
+//    }
+//
+//    public Optional<Integer> width(){
+//        return toInteger(width);
+//    }
 
     public ColorMapper colorMapper() {
         return ColorMapperBuilder.build(gray);
-    }
-
-    private Optional<Integer> toInteger(String number) {
-        return Optional.ofNullable(number)
-                .map(num -> Integer.valueOf(num));
     }
 
     private boolean helpFlag() {
