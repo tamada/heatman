@@ -1,5 +1,6 @@
 package jp.ac.kyoto_su.tamadalab.heatman;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -26,14 +27,22 @@ public class HeatMapGenerator {
 
     private BufferedImage createImage(DataTable table, Arguments args) {
         Dimension dim = table.size();
-        Integer scale = args.pixel().orElse(1);
+        int scale = args.pixel();
         BufferedImage image = new BufferedImage(scale * dim.width, scale * dim.height, BufferedImage.TYPE_INT_ARGB);
-        paint(table, image.createGraphics(), dim, scale, args.colorMapper());
+        Graphics2D g = image.createGraphics();
+        paint(table, g, dim, scale, args.colorMapper());
+        args.auxiliraryStep().ifPresent(step -> drawAuxiliaryLines(step, g, dim, args));
 
-        BufferedImage dest = new BufferedImage(args.width().orElse(image.getWidth()),
-                args.height().orElse(image.getHeight()), BufferedImage.TYPE_INT_ARGB);
-        dest.getGraphics().drawImage(image, 0, 0, dest.getWidth(), dest.getHeight(), null);
-        return dest;
+        return image;
+    }
+
+    private void drawAuxiliaryLines(int step, Graphics2D g, Dimension dim, Arguments args) {
+        int pixel = args.pixel();
+        g.setColor(Color.WHITE);
+        for(int i = step; i <= dim.getHeight(); i += step)
+            g.drawLine(0, i * pixel, dim.width * pixel, i * pixel);
+        for(int j = step; j <= dim.getWidth(); j += step)
+            g.drawLine(j * pixel, 0, j * pixel, dim.height * pixel);
     }
 
     private void paint(DataTable table, Graphics2D g, Dimension dim, Integer pixelSize, ColorMapper mapper) {
