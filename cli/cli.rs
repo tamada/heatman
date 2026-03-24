@@ -1,0 +1,128 @@
+use std::{ops::RangeInclusive, path::{Path, PathBuf}};
+
+use clap::{Parser, ValueEnum};
+use heatman::{Data, Error, Order, Result};
+
+#[derive(Debug, Parser)]
+#[command(author, version, about = "Heatmap generator for visualizing data in a matrix format.")]
+pub struct Heatman {
+    #[clap(short, long, default_value = "heatmap.png", help = "Destination path for the output image")]
+    dest: PathBuf,
+
+    #[clap(short, long, default_value_t = 0, help = "Assistant line gap in cells. If 0, no assistant line will be drawn.")]
+    assistant_line_gap: usize,
+
+    #[clap(short, long, default_value_t = 3, help = "Pixel size of of cells")]
+    pixel: usize,
+
+    #[clap(long, help = "Output scaler image. If true, almost options will be ignored and output a scaler image into the file specified by dest option.
+Also, the pixel option will be used as the height of the scaler image.")]
+    output_scaler: bool,
+
+    #[clap(short, long, default_value = "info", value_enum, help = "Logging level (trace, debug, info, warn, error)")]
+    level: LogLevel,
+
+    #[clap(short, long, default_value = "0-1", help = "Specify the value range for the input data.", value_parser = parse_range)]
+    range: RangeInclusive<f64>,
+
+    #[clap(long, conflicts_with_all = ["row_order", "column_order"],
+        help = "The file describing the order of the data to be plotted.
+Each line should contain a single string that matches the name of the data to be plotted.
+The triple dash line (---) means the assistant line is drawin here.
+The # is the comment line. escape the # with \\# if you want to use it as a name.
+If not provided, the order will be determined by the order of the data in the input files.")]
+    order: Option<PathBuf>,
+
+    #[clap(long, help = "The file describing the order of the rows to be plotted.", requires = "column_order")]
+    row_order: Option<PathBuf>,
+
+    #[clap(long, help = "The file describing the order of the columns to be plotted.", requires = "row_order")]
+    column_order: Option<PathBuf>,
+
+    #[clap(index = 1, help = "Input files containing the data to be plotted. The csv file should contains the row and column header.")]
+    input_file: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+fn parse_range(s: &str) -> std::result::Result<RangeInclusive<f64>, String> {
+    let parts: Vec<&str> = s.split('-').collect();
+    if parts.len() != 2 {
+        return Err(format!("{s}: The range should be specified as '10-50' with a hyphen"));
+    }
+    
+    let start = parts[0].parse::<f64>()
+        .map_err(|e| format!("{s}: Failed to parse start value: {}", e))?;
+    let end = parts[1].parse::<f64>()
+        .map_err(|e| format!("{s}: Failed to parse end value: {}", e))?;
+    
+    if start > end {
+        return Err(format!("{s}: Start value must be less than or equal to end value"));
+    }
+    
+    Ok(start..=end)
+}
+
+fn init_log(level: &LogLevel) {
+    unsafe {
+        match level {
+            LogLevel::Trace => std::env::set_var("RUST_LOG", "trace"),
+            LogLevel::Debug => std::env::set_var("RUST_LOG", "debug"),
+            LogLevel::Info => std::env::set_var("RUST_LOG", "info"),
+            LogLevel::Warn => std::env::set_var("RUST_LOG", "warn"),
+            LogLevel::Error => std::env::set_var("RUST_LOG", "error"),
+        }
+    };
+    env_logger::init()
+}
+
+impl Heatman {
+    pub fn validate(self) -> Result<Self> {
+        init_log(&self.level);
+        match (self.output_scaler, &self.input_file) {
+            (true, Some(_)) => Err(Error::InvalidData("Input file should not be specified in scaler mode".to_string())),
+            (false, None) => Err(Error::InvalidData("Input file must be specified in heatmap mode".to_string())),
+            (false, Some(path)) => {
+                if !path.exists() {
+                    Err(Error::FileNotFound(path.clone()))
+                } else {
+                    Ok(self)
+                }
+            },
+            (true, None) => Ok(self),
+        }
+    }
+
+    pub fn load_image(&self) -> Result<heatman::Data<f64>> {
+        heatman::load_with(&self.input_file.as_ref().unwrap(), &self.range)
+    }
+
+    pub fn order<T>(&self, data: &Data<T>) -> Result<Order> {
+        if let Some(order_path) = &self.order {
+            Order::load_symmetric(order_path)
+        } else if let (Some(row_order_path), Some(col_order_path)) = (&self.row_order, &self.column_order) {
+            Order::load_asymmetric(row_order_path, col_order_path)
+        } else {
+            Ok(Order::Asymmetric(data.row_headers(), data.col_headers()))
+        }
+    }
+
+    pub fn pixel(&self) -> usize {
+        self.pixel
+    }
+
+    pub fn dest(&self) -> &Path {
+        &self.dest
+    }
+
+    pub fn is_scaler_mode(&self) -> bool {
+        self.output_scaler
+    }
+}
