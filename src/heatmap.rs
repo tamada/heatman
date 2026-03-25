@@ -38,7 +38,7 @@ impl Order {
         }
     }
 
-    pub fn rows<T>(&self) -> impl Iterator<Item = &String> {
+    pub fn rows(&self) -> impl Iterator<Item = &String> {
         match self {
             Order::Symmetric(items) => items.iter(),
             Order::Asymmetric(rows, _) => rows.iter(),

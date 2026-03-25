@@ -44,7 +44,9 @@ fn generate_scaler(heatman: Heatman) -> Result<()> {
 
 fn generate_heatmap(heatman: Heatman) -> Result<()> {
     let data = heatman.load_image()?;
-    let rgbdata: Data<Rgba<u8>> = data.into();
+    let order = heatman.order(&data)?;
+    let reordered_data = data.reorder(&order);
+    let rgbdata: Data<Rgba<u8>> = reordered_data.into();
     output_image(rgbdata, heatman.pixel(), heatman.pixel(), heatman.dest())
 }
 
@@ -52,7 +54,9 @@ fn generate_items<F>(heatman: Heatman, mapper: F) -> Result<()>
 where F: Fn(&Data<f64>) -> Vec<String> 
 {
     let data = heatman.load_image()?;
-    let items = mapper(&data);
+    let order = heatman.order(&data)?;
+    let reordered_data = data.reorder(&order);
+    let items = mapper(&reordered_data);
     for item in items {
         println!("{item}");
     }

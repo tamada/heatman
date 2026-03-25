@@ -121,6 +121,27 @@ impl<T> Data<T> {
             .collect::<Vec<Vec<Option<U>>>>();
         Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
     }
+
+    pub fn reorder(self, order: &crate::Order) -> Self 
+    where T: Clone
+    {
+        let row_headers: Vec<String> = order.rows().cloned().collect();
+        let col_headers: Vec<String> = order.columns().cloned().collect();
+
+        let mut new_cells = Vec::new();
+        for row_name in row_headers.iter().filter(|&h| h != "---") {
+            let mut new_row = Vec::new();
+            for col_name in col_headers.iter().filter(|&h| h != "---") {
+                new_row.push(self.cell_of(row_name, col_name).cloned());
+            }
+            new_cells.push(new_row);
+        }
+        Data {
+            row_headers: Headers { items: row_headers },
+            col_headers: Headers { items: col_headers },
+            cells: new_cells,
+        }
+    }
 }
 
 impl From<Data<f64>> for Data<Rgba<u8>> {
