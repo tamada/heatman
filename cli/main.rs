@@ -11,7 +11,7 @@ fn output_image(data: Data<Rgba<u8>>, pixel_width: usize, pixel_height: usize, d
     let img_width = data.image_width(pixel_width) as u32;
     let img_height = data.image_height(pixel_height) as u32;
     log::info!("Output image size: {}x{}", img_width, img_height);
-    let gap_color = Rgba([0, 0, 0, 255]);
+    let gap_color = Rgba([255, 255, 255, 0]);
     let mut result_image = ImageBuffer::new(img_width, img_height);
 
     let row_mapping = data.pixel_mapping_row(pixel_height);
