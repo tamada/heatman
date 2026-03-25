@@ -4,6 +4,7 @@ use palette::{Hsv, IntoColor, Srgb};
 
 use crate::{Error, Result};
 
+/// Represents a matrix of data with optional row and column headers.
 pub struct Data<T> {
     row_headers: Headers,
     col_headers: Headers,
@@ -11,38 +12,39 @@ pub struct Data<T> {
 }
 
 impl<T> Data<T> {
+    /// Creates a new `Data` instance without headers.
     pub fn new(cells: Vec<Vec<Option<T>>>) -> Self {
         Self::new_with_headers(vec![], vec![], cells)
     }
 
+    /// Creates a new `Data` instance with specified row and column headers.
     pub fn new_with_headers(row_headers: Vec<String>, col_headers: Vec<String>, cells: Vec<Vec<Option<T>>>) -> Self {
         Data { row_headers: Headers { items: row_headers }, col_headers: Headers { items: col_headers }, cells }
     }
 
-    pub fn gapps_row(&self, pixel_size: usize) -> Vec<bool> {
-        self.row_headers.gaps(pixel_size)
+    /// Generates a mapping from pixel rows to data row indices, considering the pixel size and assistant lines.
+    /// Returns a vector where each element is `Some(index)` of the data row, or `None` for a gap (assistant line).
+    pub fn pixel_mapping_row(&self, pixel_size: usize) -> Vec<Option<usize>> {
+        self.row_headers.pixel_mapping(self.rows(), pixel_size)
     }
 
-    pub fn gapps_col(&self, pixel_size: usize) -> Vec<bool> {
-        self.col_headers.gaps(pixel_size)
+    /// Generates a mapping from pixel columns to data column indices, considering the pixel size and assistant lines.
+    /// Returns a vector where each element is `Some(index)` of the data column, or `None` for a gap (assistant line).
+    pub fn pixel_mapping_col(&self, pixel_size: usize) -> Vec<Option<usize>> {
+        self.col_headers.pixel_mapping(self.cols(), pixel_size)
     }
 
+    /// Calculates the total height of the output image in pixels.
     pub fn image_height(&self, pixel_size: usize) -> usize {
-        if self.row_headers.is_empty() {
-            self.rows() * pixel_size
-        } else {
-            self.row_headers.gaps(pixel_size).len()
-        }
+        self.pixel_mapping_row(pixel_size).len()
     }
 
+    /// Calculates the total width of the output image in pixels.
     pub fn image_width(&self, pixel_size: usize) -> usize {
-        if self.col_headers.is_empty() {
-            self.cols() * pixel_size
-        } else {
-            self.col_headers.gaps(pixel_size).len()
-        }
+        self.pixel_mapping_col(pixel_size).len()
     }
 
+    /// Returns the number of logical rows in the data.
     pub fn rows(&self) -> usize {
         if self.row_headers.is_empty() {
             self.cells.len()
@@ -51,6 +53,7 @@ impl<T> Data<T> {
         } 
     }
 
+    /// Returns the number of logical columns in the data.
     pub fn cols(&self) -> usize {
         if self.col_headers.is_empty() {
             self.cells.iter()
@@ -145,37 +148,58 @@ fn get_cell_of<'a, T>(data: &'a Data<T>, row_name: &str, col_name: &str) -> Opti
     data.cells.get(row_index)?.get(col_index)?.as_ref()
 }
 
+/// Manages a list of headers, including support for assistant line markers ("---").
 pub struct Headers {
     items: Vec<String>,
 }
 
 impl Headers {
-    pub fn gaps(&self, pixel_size: usize) -> Vec<bool> {
-        let mut gaps = Vec::new();
-        for item in self.items.iter() {
-            if item == "---" {
-                gaps.push(true);
-            } else {
-                for _i in 0..pixel_size {
-                    gaps.push(false);
+    /// Creates a pixel-to-index mapping for the headers.
+    /// 
+    /// If headers are empty, it generates a simple repeated mapping based on `count` and `pixel_size`.
+    /// If headers exist, it respects the "---" markers to insert gaps (`None`) into the mapping.
+    pub fn pixel_mapping(&self, count: usize, pixel_size: usize) -> Vec<Option<usize>> {
+        if self.is_empty() {
+            let mut mapping = Vec::new();
+            for i in 0..count {
+                for _ in 0..pixel_size {
+                    mapping.push(Some(i));
                 }
             }
+            mapping
+        } else {
+            let mut mapping = Vec::new();
+            let mut current_index = 0;
+            for item in self.items.iter() {
+                if item == "---" {
+                    mapping.push(None);
+                } else {
+                    for _ in 0..pixel_size {
+                        mapping.push(Some(current_index));
+                    }
+                    current_index += 1;
+                }
+            }
+            mapping
         }
-        gaps
     }
 
+    /// Returns true if there are no headers defined.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
+    /// Returns the number of items in the headers.
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
+    /// Gets the header item at the specified index.
     pub fn get(&self, index: usize) -> Option<&String> {
         self.items.get(index)
     }
 
+    /// Returns the index of the header item with the specified name.
     pub fn index_of(&self, name: &str) -> Option<usize> {
         self.items.iter().position(|item| item == name)
     }
