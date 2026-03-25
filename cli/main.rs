@@ -36,7 +36,8 @@ fn generate_scaler(heatman: Heatman) -> Result<()> {
     let line = range.into_iter()
         .map(|i| Some(i as f64 / 240.0))
         .collect::<Vec<Option<f64>>>();
-    let table = vec![line];
+    let table = (0..10)
+        .map(|_| line.clone()).collect::<Vec<Vec<_>>>();
     let data = Data::new(table);
     let rgbdata: Data<Rgba<u8>> = data.into();
     output_image(rgbdata, 1, heatman.pixel(), heatman.dest())
@@ -51,7 +52,8 @@ fn generate_heatmap(heatman: Heatman) -> Result<()> {
 }
 
 fn generate_items<F>(heatman: Heatman, mapper: F) -> Result<()>
-where F: Fn(&Data<f64>) -> Vec<String> 
+where
+        F: Fn(&Data<f64>) -> Vec<String> 
 {
     let data = heatman.load_image()?;
     let order = heatman.order(&data)?;

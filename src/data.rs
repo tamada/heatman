@@ -122,17 +122,60 @@ impl<T> Data<T> {
         Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
     }
 
+    pub fn is_lower_triangular(&self) -> bool {
+        let rows = self.rows();
+        let cols = self.cols();
+        if rows != cols {
+            return false;
+        }
+        for r in 0..rows {
+            for c in r + 1..cols {
+                if get_cell(&self.cells, r, c).is_some() {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    pub fn is_upper_triangular(&self) -> bool {
+        let rows = self.rows();
+        let cols = self.cols();
+        if rows != cols {
+            return false;
+        }
+        for r in 0..rows {
+            for c in 0..r {
+                if get_cell(&self.cells, r, c).is_some() {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
     pub fn reorder(self, order: &crate::Order) -> Self 
     where T: Clone
     {
+        let is_lower = self.is_lower_triangular();
+        let is_upper = self.is_upper_triangular();
+        let is_symmetric = matches!(order, crate::Order::Symmetric(_));
+
         let row_headers: Vec<String> = order.rows().cloned().collect();
         let col_headers: Vec<String> = order.columns().cloned().collect();
 
         let mut new_cells = Vec::new();
-        for row_name in row_headers.iter().filter(|&h| h != "---") {
+        for (i, row_name) in row_headers.iter().filter(|&h| h != "---").enumerate() {
             let mut new_row = Vec::new();
-            for col_name in col_headers.iter().filter(|&h| h != "---") {
-                new_row.push(self.cell_of(row_name, col_name).cloned());
+            for (j, col_name) in col_headers.iter().filter(|&h| h != "---").enumerate() {
+                let cell = if is_symmetric && is_lower && i < j {
+                    None
+                } else if is_symmetric && is_upper && i > j {
+                    None
+                } else {
+                    self.cell_of(row_name, col_name).cloned()
+                };
+                new_row.push(cell);
             }
             new_cells.push(new_row);
         }
@@ -281,3 +324,52 @@ pub fn clamp_and_scale(value: f64, range: &RangeInclusive<f64>) -> f64 {
         (value - start) / (end - start)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Order;
+
+    #[test]
+    fn test_triangular_preservation() {
+        let data = load("examples/sample.csv").unwrap();
+        assert!(data.is_lower_triangular());
+        assert!(!data.is_upper_triangular());
+
+        let headers = data.row_headers();
+        let mut reversed_headers = headers.clone();
+        reversed_headers.reverse();
+        let order = Order::Symmetric(reversed_headers.clone());
+
+        let reordered = data.reorder(&order);
+        assert!(reordered.is_lower_triangular());
+        assert_eq!(reordered.row_headers(), reversed_headers);
+        assert_eq!(reordered.col_headers(), reversed_headers);
+    }
+
+    #[test]
+    fn test_upper_triangular_preservation() {
+        // Create a simple upper triangular matrix
+        let cells = vec![
+            vec![Some(1.0), Some(2.0), Some(3.0)],
+            vec![None, Some(4.0), Some(5.0)],
+            vec![None, None, Some(6.0)],
+        ];
+        let headers = vec!["A".to_string(), "B".to_string(), "C".to_string()];
+        let data = Data::new_with_headers(headers.clone(), headers.clone(), cells);
+        assert!(data.is_upper_triangular());
+        assert!(!data.is_lower_triangular());
+
+        let mut reversed_headers = headers.clone();
+        reversed_headers.reverse();
+        let order = Order::Symmetric(reversed_headers.clone());
+
+        let reordered = data.reorder(&order);
+        assert!(reordered.is_upper_triangular());
+        assert_eq!(reordered.row_headers(), reversed_headers);
+        assert_eq!(reordered.col_headers(), reversed_headers);
+    }
+}
+
+
+
