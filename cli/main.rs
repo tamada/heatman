@@ -48,14 +48,26 @@ fn generate_heatmap(heatman: Heatman) -> Result<()> {
     output_image(rgbdata, heatman.pixel(), heatman.pixel(), heatman.dest())
 }
 
+fn generate_items<F>(heatman: Heatman, mapper: F) -> Result<()>
+where F: Fn(&Data<f64>) -> Vec<String> 
+{
+    let data = heatman.load_image()?;
+    let items = mapper(&data);
+    for item in items {
+        println!("{item}");
+    }
+    Ok(())
+}
+
 fn rs_main(args: Vec<String>) -> Result<()> {
     let heatman: Heatman = Parser::try_parse_from(args)
         .map_err(|e| Error::Clap(e))
         .and_then(|h: Heatman| h.validate())?;
-    if heatman.is_scaler_mode() {
-        generate_scaler(heatman)
-    } else {
-        generate_heatmap(heatman)
+    match heatman.mode() {
+        cli::Mode::Scaler => generate_scaler(heatman),
+        cli::Mode::Heatmap => generate_heatmap(heatman),
+        cli::Mode::Rows => generate_items(heatman, |data| data.row_headers()),
+        cli::Mode::Columns => generate_items(heatman, |data| data.col_headers()),
     }
 }
 

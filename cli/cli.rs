@@ -3,6 +3,18 @@ use std::{ops::RangeInclusive, path::{Path, PathBuf}};
 use clap::{Parser, ValueEnum};
 use heatman::{Data, Error, Order, Result};
 
+#[derive(Debug, Parser, ValueEnum, Clone, PartialEq, Eq, Hash)]
+pub enum Mode {
+    /// Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image.
+    Scaler,
+    /// Output a heatmap image.
+    Heatmap,
+    /// Output the rows of the data.
+    Rows,
+    /// Output the columns of the data.
+    Columns,
+}
+
 #[derive(Debug, Parser)]
 #[command(author, version, about = "Heatmap generator for visualizing data in a matrix format.")]
 pub struct Heatman {
@@ -15,9 +27,12 @@ pub struct Heatman {
     #[clap(short, long, default_value_t = 3, help = "Pixel size of of cells")]
     pixel: usize,
 
-    #[clap(long, help = "Output scaler image. If true, almost options will be ignored and output a scaler image into the file specified by dest option.
-Also, the pixel option will be used as the height of the scaler image.")]
-    output_scaler: bool,
+    #[clap(short, long, value_enum, default_value_t = Mode::Heatmap, help = "Output mode")]
+    mode: Mode,
+
+//     #[clap(long, help = "Output scaler image. If true, almost options will be ignored and output a scaler image into the file specified by dest option.
+// Also, the pixel option will be used as the height of the scaler image.")]
+//     output_scaler: bool,
 
     #[clap(short, long, default_value = "info", value_enum, help = "Logging level (trace, debug, info, warn, error)")]
     level: LogLevel,
@@ -83,20 +98,29 @@ fn init_log(level: &LogLevel) {
     env_logger::init()
 }
 
+fn input_file_required(h: Heatman) -> Result<Heatman> {
+    if h.input_file.is_none() {
+        Err(Error::InvalidData("Input file must be specified in heatmap mode".to_string()))
+    } else if let Some(path) = &h.input_file && !path.exists() {
+        Err(Error::FileNotFound(path.clone()))
+    } else {
+        Ok(h)
+    }
+}
+
 impl Heatman {
     pub fn validate(self) -> Result<Self> {
         init_log(&self.level);
-        match (self.output_scaler, &self.input_file) {
-            (true, Some(_)) => Err(Error::InvalidData("Input file should not be specified in scaler mode".to_string())),
-            (false, None) => Err(Error::InvalidData("Input file must be specified in heatmap mode".to_string())),
-            (false, Some(path)) => {
-                if !path.exists() {
-                    Err(Error::FileNotFound(path.clone()))
+        match self.mode {
+            Mode::Scaler => {
+                if self.input_file.is_some() {
+                    Err(Error::InvalidData("Input file should not be specified in scaler mode".to_string()))
                 } else {
                     Ok(self)
                 }
             },
-            (true, None) => Ok(self),
+            Mode::Heatmap => input_file_required(self),
+            Mode::Rows | Mode::Columns => input_file_required(self),
         }
     }
 
@@ -122,7 +146,7 @@ impl Heatman {
         &self.dest
     }
 
-    pub fn is_scaler_mode(&self) -> bool {
-        self.output_scaler
+    pub fn mode(&self) -> &Mode {
+        &self.mode
     }
 }
