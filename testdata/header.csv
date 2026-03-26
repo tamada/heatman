@@ -1,4 +1,4 @@
-bzip2_clang_894834e8.json
+bzip2_clang_894834e8.json # this is comment
 bzip2_gcc_b1c2c8b8.json
 bzip2_go_19140ab0.json
 bzip2_tgo_fc5fc375.json
@@ -6,7 +6,7 @@ bzip2_rs_sd_f193b935.json
 bzip2_rs_sr_ed89f055.json
 bzip2_rs_pd_734ca4e0.json
 bzip2_rs_pr_3a7d90f9.json
-----
+---- # this line means assistant line (3 or more dashes)
 factorize_clang_de43ffce.json
 factorize_gcc_19f3120b.json
 factorize_go_ac545792.json

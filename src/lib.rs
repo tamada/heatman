@@ -11,13 +11,11 @@
 //! use heatman::{Heatmap, Data, DataLoader};
 //! use image::{ImageBuffer, Rgba};
 //! 
-//! let data = DataLoader::load("testdata/sample.csv")
+//! let data = DataLoader::load("testdata/sample.csv") // load data from CSV file
 //!     .expect("Failed to load data from CSV");
-//! let context = Heatmap::new(cells, 10);
-//! let cells: Data<Rgba<u8>> = data.into();
-//! let context = Heatmap::new(cells, 10);
-//! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into();
-//! image.save("example1.png")
+//! let context = Heatmap::new(cells, 10);       // create heatmap context with pixel size of 10
+//! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into(); // convert heatmap context into an image
+//! image.save("example1.png")                   // save the generated heatmap image
 //!     .expect("Failed to save heatmap image");
 //! ```
 //! 
@@ -30,13 +28,27 @@
 //! use heatman::{Heatmap, ScalerBuilder};
 //! use image::{ImageBuffer, Rgba};
 //! 
-//! let data = ScalerBuilder::build_with(20);
-//! let context = Heatmap::new(data, 1);
+//! let data = ScalerBuilder::build_with(20);   // create scaler data with height of 20 pixels
+//! let context = Heatmap::new(data, 1);        // create heatmap context with pixel size of 1 (each cell corresponds to 1 pixel)
 //! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into();
-//! image.save("scaler.png")
+//! image.save("scaler.png")                    // save the generated scaler image
 //!     .expect("Failed to save scaler image");
 //! ```
 //! 
+//! ### Example 3: Specify the order of rows and columns
+//! 
+//! ```rust
+//! let data = DataLoader::load("testdata/jaccard.csv")
+//!     .expect("Failed to load data from CSV");
+//! let order = Order::load_symmetric("testdata/header.csv")
+//!     .expect("Failed to load order from file");
+//! let reordered_data = data.reorder(&order);
+//! let cells: Data<Rgba<u8>> = reordered_data.into();
+//! let context = Heatmap::new(cells, 10);
+//! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into();
+//! image.save("jaccard.png")
+//!     .expect("Failed to save heatmap image");
+//! ```
 mod data;
 mod heatmap;
 
