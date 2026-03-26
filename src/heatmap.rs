@@ -3,27 +3,34 @@ use std::io::{BufRead, BufReader};
 
 use crate::{Error, Result};
 
+/// Represents a heatmap. (Currently a placeholder)
 pub struct Heatmap {
 
 }
 
+/// Represents the order of rows and columns in a heatmap.
 pub enum Order {
+    /// Symmetric order where rows and columns are the same.
     Symmetric(Vec<String>),
+    /// Asymmetric order where rows and columns are different.
     Asymmetric(Vec<String>, Vec<String>),
 }
 
 impl Order {
+    /// Loads a symmetric order from the specified path.
     pub fn load_symmetric<P: AsRef<Path>>(path: P) -> Result<Self> {
         load_order_vec(path)
             .map(Order::Symmetric)
     }
 
+    /// Loads an asymmetric order from the specified row and column paths.
     pub fn load_asymmetric<P: AsRef<Path>>(row_path: P, column_path: P) -> Result<Self> {
         let rows = load_order_vec(row_path)?;
         let cols = load_order_vec(column_path)?;
         Ok(Order::Asymmetric(rows, cols))
     }
 
+    /// Returns true if the row order is empty.
     pub fn is_row_empty(&self) -> bool {
         match self {
             Order::Symmetric(items) => items.is_empty(),
@@ -31,6 +38,7 @@ impl Order {
         }
     }
 
+    /// Returns true if the column order is empty.
     pub fn is_column_empty(&self) -> bool {
         match self {
             Order::Symmetric(items) => items.is_empty(),
@@ -38,6 +46,7 @@ impl Order {
         }
     }
 
+    /// Returns an iterator over the row names.
     pub fn rows(&self) -> impl Iterator<Item = &String> {
         match self {
             Order::Symmetric(items) => items.iter(),
@@ -45,6 +54,7 @@ impl Order {
         }
     }
 
+    /// Returns an iterator over the column names.
     pub fn columns(&self) -> impl Iterator<Item = &String> {
         match self {
             Order::Symmetric(items) => items.iter(),
@@ -52,6 +62,7 @@ impl Order {
         }
     }
 
+    /// Applies assistant lines to the order at the specified gap interval.
     pub fn apply_assistant_line(&mut self, gap: usize) {
         if gap == 0 {
             return;

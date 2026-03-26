@@ -3,6 +3,7 @@ use std::{ops::RangeInclusive, path::{Path, PathBuf}};
 use clap::{Parser, ValueEnum};
 use heatman::{Data, Error, Order, Result};
 
+/// Output mode for the heatman CLI.
 #[derive(Debug, Parser, ValueEnum, Clone, PartialEq, Eq, Hash)]
 pub enum Mode {
     /// Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image.
@@ -15,6 +16,7 @@ pub enum Mode {
     Columns,
 }
 
+/// Command line arguments for the heatman CLI.
 #[derive(Debug, Parser)]
 #[command(author, version, about = "Heatmap generator for visualizing data in a matrix format.")]
 pub struct Heatman {
@@ -58,6 +60,7 @@ If not provided, the order will be determined by the order of the data in the in
     input_file: Option<PathBuf>,
 }
 
+/// Logging levels for the heatman CLI.
 #[derive(Debug, Clone, ValueEnum)]
 pub enum LogLevel {
     Trace,
@@ -109,6 +112,7 @@ fn input_file_required(h: Heatman) -> Result<Heatman> {
 }
 
 impl Heatman {
+    /// Validates the command line arguments.
     pub fn validate(self) -> Result<Self> {
         init_log(&self.level);
         match self.mode {
@@ -124,10 +128,12 @@ impl Heatman {
         }
     }
 
+    /// Loads the data from the input file.
     pub fn load_image(&self) -> Result<heatman::Data<f64>> {
         heatman::load_with(&self.input_file.as_ref().unwrap(), &self.range)
     }
 
+    /// Determines the order of rows and columns.
     pub fn order<T>(&self, data: &Data<T>) -> Result<Order> {
         if let Some(order_path) = &self.order {
             Order::load_symmetric(order_path)
@@ -138,18 +144,22 @@ impl Heatman {
         }
     }
 
+    /// Returns the pixel size of cells.
     pub fn pixel(&self) -> usize {
         self.pixel
     }
 
+    /// Returns the destination path for the output image.
     pub fn dest(&self) -> &Path {
         &self.dest
     }
 
+    /// Returns the output mode.
     pub fn mode(&self) -> &Mode {
         &self.mode
     }
 
+    /// Returns the assistant line gap.
     pub fn assistant_line_gap(&self) -> usize {
         self.assistant_line_gap
     }

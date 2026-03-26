@@ -1,22 +1,33 @@
 mod data;
 mod heatmap;
 
-pub use data::{Data, convert, load, load_with};
+pub use data::{Data, convert, load, load_with, is_assistant_line};
 pub use heatmap::{Heatmap, Order};
 use std::{fmt::Display, path::PathBuf};
 
+/// A specialized Result type for heatman operations.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Represents errors that can occur during heatman operations.
 #[derive(Debug)]
 pub enum Error {
+    /// Multiple errors.
     Array(Vec<Error>),
+    /// Error from clap.
     Clap(clap::Error),
+    /// Error from csv.
     Csv(csv::Error),
+    /// File not found.
     FileNotFound(PathBuf),
+    /// Error from image.
     Image(image::ImageError),
+    /// Invalid data.
     InvalidData(String),
+    /// IO error.
     Io(std::io::Error),
+    /// Error parsing value range.
     ParseRange(String, String),
+    /// Error parsing float.
     ParseFloat(String, std::num::ParseFloatError),
 }
 

@@ -64,14 +64,17 @@ impl<T> Data<T> {
         }
     }
 
+    /// Returns the row header at the specified index.
     pub fn row_header(&self, index: usize) -> Option<&String> {
         self.row_headers.get(index)
     }
 
+    /// Returns the column header at the specified index.
     pub fn col_header(&self, index: usize) -> Option<&String> {
         self.col_headers.get(index)
     }
 
+    /// Returns all row headers.
     pub fn row_headers(&self) -> Vec<String> {
         if self.row_headers.is_empty() {
             (0..self.rows()).map(|i| i.to_string()).collect()
@@ -80,6 +83,7 @@ impl<T> Data<T> {
         }
     }
 
+    /// Returns all column headers.
     pub fn col_headers(&self) -> Vec<String> {
         if self.col_headers.is_empty() {
             (0..self.cols()).map(|i| i.to_string()).collect()
@@ -88,24 +92,30 @@ impl<T> Data<T> {
         }
     }
 
+    /// Returns the value of the cell at the specified row and column.
     pub fn cell(&self, row: usize, col: usize) -> Option<&T> {
         get_cell(&self.cells, row, col)
     }
 
+    /// Returns the value of the cell at the specified row and column, considering symmetry.
+    /// If the cell at (row, col) is not found, it tries to find the cell at (col, row).
     pub fn cell_symmetric(&self, row: usize, col: usize) -> Option<&T> {
         get_cell(&self.cells, row, col)
             .or_else(|| get_cell(&self.cells, col, row))
     }
 
+    /// Returns the value of the cell with the specified row and column names.
     pub fn cell_of(&self, row_name: &str, col_name: &str) -> Option<&T> {
         get_cell_of(self, row_name, col_name)
     }
 
+    /// Returns the value of the cell with the specified row and column names, considering symmetry.
     pub fn cell_of_symmetric(&self, row_name: &str, col_name: &str) -> Option<&T> {
         get_cell_of(self, row_name, col_name)
             .or_else(|| get_cell_of(self, col_name, row_name))
     }
 
+    /// Converts the data type to another type that implements `From<T>`.
     pub fn convert<U: From<T>>(self) -> Data<U> {
         let cells = self.cells.into_iter()
             .map(|row| row.into_iter()
@@ -115,6 +125,7 @@ impl<T> Data<T> {
         Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
     }
 
+    /// Converts the data type using the specified function.
     pub fn convert_with<U, F: Fn(T) -> U>(self, f: F) -> Data<U> {
         let cells = self.cells.into_iter()
             .map(|row| row.into_iter()
@@ -124,6 +135,7 @@ impl<T> Data<T> {
         Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
     }
 
+    /// Returns true if the data is lower triangular.
     pub fn is_lower_triangular(&self) -> bool {
         let rows = self.rows();
         let cols = self.cols();
@@ -140,6 +152,7 @@ impl<T> Data<T> {
         true
     }
 
+    /// Returns true if the data is upper triangular.
     pub fn is_upper_triangular(&self) -> bool {
         let rows = self.rows();
         let cols = self.cols();
@@ -156,6 +169,7 @@ impl<T> Data<T> {
         true
     }
 
+    /// Reorders the data based on the specified order.
     pub fn reorder(self, order: &crate::Order) -> Self 
         where T: Clone
     {
@@ -203,6 +217,7 @@ impl From<Data<f64>> for Data<Rgba<u8>> {
     }
 }
 
+/// Converts a floating-point value to an RGBA color.
 pub fn convert(value: f64) -> Rgba<u8> {
     let r = value.clamp(0.0, 1.0);
     let hue = (1.0 - r) * 240.0; // 0 (red) to 240 (blue)
@@ -231,7 +246,7 @@ impl Headers {
     /// Creates a pixel-to-index mapping for the headers.
     /// 
     /// If headers are empty, it generates a simple repeated mapping based on `count` and `pixel_size`.
-    /// If headers exist, it respects the "---" markers to insert gaps (`None`) into the mapping.
+    /// If headers exist, it respects assistant line markers (three or more dashes) to insert gaps (`None`) into the mapping.
     pub fn pixel_mapping(&self, count: usize, pixel_size: usize) -> Vec<Option<usize>> {
         if self.is_empty() {
             let mut mapping = Vec::new();
@@ -276,10 +291,12 @@ impl Headers {
     }
 }
 
+/// Returns true if the string represents an assistant line (three or more dashes).
 pub fn is_assistant_line(s: &str) -> bool {
     s.len() >= 3 && s.chars().all(|c| c == '-')
 }
 
+/// Loads data from the specified path, scaling values to the specified range.
 pub fn load_with<P: AsRef<Path>>(path: P, range: &RangeInclusive<f64>) -> Result<Data<f64>> {
     let path = path.as_ref();
     if !path.exists() {
@@ -319,6 +336,7 @@ pub fn load_with<P: AsRef<Path>>(path: P, range: &RangeInclusive<f64>) -> Result
     Ok(Data { row_headers: Headers { items: row_headers }, col_headers, cells })
 }
 
+/// Loads data from the specified path, scaling values to the range [0.0, 1.0].
 pub fn load<P: AsRef<Path>>(path: P) -> Result<Data<f64>> {
     load_with(path, &(0.0..=1.0))
 }
