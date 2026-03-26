@@ -149,4 +149,8 @@ impl Heatman {
     pub fn mode(&self) -> &Mode {
         &self.mode
     }
+
+    pub fn assistant_line_gap(&self) -> usize {
+        self.assistant_line_gap
+    }
 }

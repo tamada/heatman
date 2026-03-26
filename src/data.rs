@@ -49,7 +49,7 @@ impl<T> Data<T> {
         if self.row_headers.is_empty() {
             self.cells.len()
         } else {
-            self.row_headers.items.iter().filter(|&h| h != "---").count()
+            self.row_headers.items.iter().filter(|&h| !is_assistant_line(h)).count()
         } 
     }
 
@@ -60,7 +60,7 @@ impl<T> Data<T> {
                 .map(|row| row.len())
                 .max().unwrap_or(0)
         } else {
-            self.col_headers.items.iter().filter(|&h| h != "---").count()
+            self.col_headers.items.iter().filter(|&h| !is_assistant_line(h)).count()
         }
     }
 
@@ -90,10 +90,18 @@ impl<T> Data<T> {
 
     pub fn cell(&self, row: usize, col: usize) -> Option<&T> {
         get_cell(&self.cells, row, col)
+    }
+
+    pub fn cell_symmetric(&self, row: usize, col: usize) -> Option<&T> {
+        get_cell(&self.cells, row, col)
             .or_else(|| get_cell(&self.cells, col, row))
     }
 
     pub fn cell_of(&self, row_name: &str, col_name: &str) -> Option<&T> {
+        get_cell_of(self, row_name, col_name)
+    }
+
+    pub fn cell_of_symmetric(&self, row_name: &str, col_name: &str) -> Option<&T> {
         get_cell_of(self, row_name, col_name)
             .or_else(|| get_cell_of(self, col_name, row_name))
     }
@@ -149,7 +157,7 @@ impl<T> Data<T> {
     }
 
     pub fn reorder(self, order: &crate::Order) -> Self 
-    where T: Clone
+        where T: Clone
     {
         let is_lower = self.is_lower_triangular();
         let is_upper = self.is_upper_triangular();
@@ -159,19 +167,23 @@ impl<T> Data<T> {
         let col_headers: Vec<String> = order.columns().cloned().collect();
 
         let mut new_cells = Vec::new();
-        let filtered_rows: Vec<_> = row_headers.iter().filter(|&h| h != "---").collect();
-        let filtered_cols: Vec<_> = col_headers.iter().filter(|&h| h != "---").collect();
+        let filtered_rows: Vec<_> = row_headers.iter().filter(|&h| !is_assistant_line(h)).collect();
+        let filtered_cols: Vec<_> = col_headers.iter().filter(|&h| !is_assistant_line(h)).collect();
 
         for (i, row_name) in filtered_rows.into_iter().enumerate() {
             let mut new_row = Vec::new();
             for (j, col_name) in filtered_cols.iter().enumerate() {
-                let value = self.cell_of(row_name, col_name).cloned();
-                let cell = if is_symmetric && is_lower && i < j {
-                    None
-                } else if is_symmetric && is_upper && i > j {
-                    None
+                let cell = if is_symmetric {
+                    let value = self.cell_of_symmetric(row_name, col_name).cloned();
+                    if is_lower && i < j {
+                        None
+                    } else if is_upper && i > j {
+                        None
+                    } else {
+                        value
+                    }
                 } else {
-                    value
+                    self.cell_of(row_name, col_name).cloned()
                 };
                 new_row.push(cell);
             }
@@ -233,7 +245,7 @@ impl Headers {
             let mut mapping = Vec::new();
             let mut current_index = 0;
             for item in self.items.iter() {
-                if item == "---" {
+                if is_assistant_line(item) {
                     mapping.push(None); // Assistant line is strictly 1 pixel
                 } else {
                     for _ in 0..pixel_size {
@@ -251,22 +263,21 @@ impl Headers {
         self.items.is_empty()
     }
 
-    /// Returns the number of items in the headers.
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
     /// Gets the header item at the specified index.
     pub fn get(&self, index: usize) -> Option<&String> {
         self.items.get(index)
     }
 
-    /// Returns the index of the header item with the specified name, ignoring "---" markers.
+    /// Returns the index of the header item with the specified name, ignoring assistant lines.
     pub fn index_of(&self, name: &str) -> Option<usize> {
         self.items.iter()
-            .filter(|&item| item != "---")
+            .filter(|&item| !is_assistant_line(item))
             .position(|item| item == name)
     }
+}
+
+pub fn is_assistant_line(s: &str) -> bool {
+    s.len() >= 3 && s.chars().all(|c| c == '-')
 }
 
 pub fn load_with<P: AsRef<Path>>(path: P, range: &RangeInclusive<f64>) -> Result<Data<f64>> {
@@ -332,10 +343,95 @@ mod tests {
     #[test]
     fn test_headers_index_of() {
         let headers = Headers {
-            items: vec!["A".to_string(), "---".to_string(), "B".to_string()],
+            items: vec!["A".to_string(), "---".to_string(), "B".to_string(), "----".to_string()],
         };
         assert_eq!(headers.index_of("A"), Some(0));
         assert_eq!(headers.index_of("B"), Some(1));
         assert_eq!(headers.index_of("---"), None);
+        assert_eq!(headers.index_of("----"), None);
+    }
+
+    #[test]
+    fn test_asymmetric_reordering_preserves_triangularity() {
+        let cells = vec![
+            vec![Some(1.0), None],
+            vec![Some(2.0), Some(3.0)],
+        ];
+        let headers = vec!["A".to_string(), "B".to_string()];
+        let data = Data::new_with_headers(headers.clone(), headers.clone(), cells);
+        
+        let order = crate::Order::Asymmetric(headers.clone(), headers.clone());
+        let reordered = data.reorder(&order);
+        
+        // it should still be lower triangular
+        assert!(reordered.is_lower_triangular());
+        assert_eq!(reordered.cell(0, 1), None);
+    }
+
+    #[test]
+    fn test_symmetric_reordering_of_triangular() {
+        let cells = vec![
+            vec![Some(1.0), None],
+            vec![Some(2.0), Some(3.0)],
+        ];
+        let headers = vec!["A".to_string(), "B".to_string()];
+        let data = Data::new_with_headers(headers.clone(), headers.clone(), cells);
+        
+        // Reverse order
+        let mut reversed = headers.clone();
+        reversed.reverse();
+        let order = crate::Order::Symmetric(reversed);
+        let reordered = data.reorder(&order);
+        
+        // Original: (A,A)=1.0, (A,B)=None, (B,A)=2.0, (B,B)=3.0
+        // New headers: [B, A]
+        // (B,B)=3.0, (B,A)=2.0, (A,B)=None (but symmetric lookup finds 2.0?), (A,A)=1.0
+        // wait, reorder with Symmetric should force it to be lower triangular
+        // New order (B, A)
+        // (0,0) is (B,B)=3.0.
+        // (1,0) is (A,B). cell_of_symmetric(A,B) is Some(2.0).
+        // (0,1) is (B,A). cell_of_symmetric(B,A) is Some(2.0). BUT i < j, so it sets None.
+        // (1,1) is (A,A)=1.0.
+        // So the new matrix is:
+        // [[3.0, None],
+        //  [2.0, 1.0]]
+        // This is STILL lower triangular!
+        assert!(reordered.is_lower_triangular());
+        assert_eq!(reordered.cell(0, 1), None);
+        assert_eq!(reordered.cell(1, 0), Some(&2.0));
+    }
+
+    #[test]
+    fn test_triangular_preservation() {
+        // Create a simple lower triangular matrix
+        let cells = vec![
+            vec![Some(1.0), None, None],
+            vec![Some(2.0), Some(3.0), None],
+            vec![Some(4.0), Some(5.0), Some(6.0)],
+        ];
+        let headers = vec!["A".to_string(), "B".to_string(), "C".to_string()];
+        let data = Data::new_with_headers(headers.clone(), headers.clone(), cells);
+        assert!(data.is_lower_triangular());
+        assert!(!data.is_upper_triangular());
+
+        // cell(0, 1) should be None if we want to preserve triangularity
+        assert_eq!(data.cell(0, 1), None);
+    }
+
+    #[test]
+    fn test_triangular_with_assistant_lines() {
+        let cells = vec![
+            vec![Some(1.0), None],
+            vec![Some(2.0), Some(3.0)],
+        ];
+        let headers = vec!["A".to_string(), "---".to_string(), "B".to_string()];
+        let data = Data::new_with_headers(headers.clone(), headers.clone(), cells);
+        
+        // rows() and cols() should be 2
+        assert_eq!(data.rows(), 2);
+        assert_eq!(data.cols(), 2);
+        
+        // it should still be lower triangular
+        assert!(data.is_lower_triangular());
     }
 }

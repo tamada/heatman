@@ -45,7 +45,8 @@ fn generate_scaler(heatman: Heatman) -> Result<()> {
 
 fn generate_heatmap(heatman: Heatman) -> Result<()> {
     let data = heatman.load_image()?;
-    let order = heatman.order(&data)?;
+    let mut order = heatman.order(&data)?;
+    order.apply_assistant_line(heatman.assistant_line_gap());
     let reordered_data = data.reorder(&order);
     let rgbdata: Data<Rgba<u8>> = reordered_data.into();
     output_image(rgbdata, heatman.pixel(), heatman.pixel(), heatman.dest())
@@ -56,7 +57,8 @@ where
         F: Fn(&Data<f64>) -> Vec<String> 
 {
     let data = heatman.load_image()?;
-    let order = heatman.order(&data)?;
+    let mut order = heatman.order(&data)?;
+    order.apply_assistant_line(heatman.assistant_line_gap());
     let reordered_data = data.reorder(&order);
     let items = mapper(&reordered_data);
     for item in items {
