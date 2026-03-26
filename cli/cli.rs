@@ -29,7 +29,7 @@ pub struct Heatman {
     #[clap(short, long, default_value_t = 0, help = "Assistant line gap in cells. If 0, no assistant line will be drawn.")]
     assistant_line_gap: usize,
 
-    #[clap(short, long, default_value_t = 3, help = "Pixel size of of cells")]
+    #[clap(short, long, default_value_t = 3, help = "Pixel size of cells")]
     pixel: usize,
 
     #[clap(short, long, value_enum, default_value_t = Mode::Heatmap, help = "Output mode")]
@@ -44,7 +44,7 @@ pub struct Heatman {
     #[clap(long, conflicts_with_all = ["row_order", "column_order"],
         help = "The file describing the order of the data to be plotted.
 Each line should contain a single string that matches the name of the data to be plotted.
-The triple dash line (---) means the assistant line is drawin here.
+The triple dash line (---) means the assistant line is drawn here.
 The # is the comment line. escape the # with \\# if you want to use it as a name.
 If not provided, the order will be determined by the order of the data in the input files.")]
     order: Option<PathBuf>,
@@ -55,7 +55,7 @@ If not provided, the order will be determined by the order of the data in the in
     #[clap(long, help = "The file describing the order of the columns to be plotted.", requires = "row_order")]
     column_order: Option<PathBuf>,
 
-    #[clap(index = 1, help = "Input files containing the data to be plotted. The csv file should contains the row and column header.")]
+    #[clap(index = 1, help = "Input files containing the data to be plotted. The csv file should contain the row and column header.")]
     input_file: Option<PathBuf>,
 }
 

@@ -48,7 +48,8 @@ where
 mod gencomp;
 
 fn rs_main(args: Vec<String>) -> Result<()> {
-    let heatman: Heatman = Parser::parse_from(args);
+    let heatman: Heatman = Parser::try_parse_from(args)
+        .map_err(Error::Clap)?;
     let heatman = heatman.validate()?;
     match heatman.mode() {
         cli::Mode::Scaler => generate_scaler(heatman),

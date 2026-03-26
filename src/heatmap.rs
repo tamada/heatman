@@ -144,12 +144,12 @@ impl Order {
         } else {
             match self {
                 Order::Symmetric(items) => {
-                    let new_items = insert_assistant_lines(items.clone(), gap);
+                    let new_items = insert_assistant_lines(items, gap);
                     Order::Symmetric(new_items)
                 },
                 Order::Asymmetric(rows, cols) => {
-                    let new_rows = insert_assistant_lines(rows.clone(), gap);
-                    let new_cols = insert_assistant_lines(cols.clone(), gap);
+                    let new_rows = insert_assistant_lines(rows, gap);
+                    let new_cols = insert_assistant_lines(cols, gap);
                     Order::Asymmetric(new_rows, new_cols)
                 }
             }
