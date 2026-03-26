@@ -90,12 +90,12 @@ jobs:
             ext: ''
           - os: windows-latest
             target: aarch64-pc-windows-gnullvm
-            artifact_name: ${{ needs.documents.outputs.appname }}-cli.exe
+            artifact_name: ${{ needs.documents.outputs.appname }}.exe
             asset_name: ${{ needs.documents.outputs.appname }}-${{ needs.documents.outputs.tag }}_windows_arm64
             ext: '.exe'
           - os: windows-latest
             target: x86_64-pc-windows-gnu
-            artifact_name: ${{ needs.documents.outputs.appname }}-cli.exe
+            artifact_name: ${{ needs.documents.outputs.appname }}.exe
             asset_name: ${{ needs.documents.outputs.appname }}-${{ needs.documents.outputs.tag }}_windows_amd64
             ext: '.exe'
           - os: macos-latest
