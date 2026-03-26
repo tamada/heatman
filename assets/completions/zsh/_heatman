@@ -1,0 +1,58 @@
+#compdef heatman
+
+autoload -U is-at-least
+
+_heatman() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-d+[Destination path for the output image]:DEST:_files' \
+'--dest=[Destination path for the output image]:DEST:_files' \
+'-a+[Assistant line gap in cells. If 0, no assistant line will be drawn.]:ASSISTANT_LINE_GAP:_default' \
+'--assistant-line-gap=[Assistant line gap in cells. If 0, no assistant line will be drawn.]:ASSISTANT_LINE_GAP:_default' \
+'-p+[Pixel size of of cells]:PIXEL:_default' \
+'--pixel=[Pixel size of of cells]:PIXEL:_default' \
+'-m+[Output mode]:MODE:((scaler\:"Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image"
+heatmap\:"Output a heatmap image"
+rows\:"Output the rows of the data"
+columns\:"Output the columns of the data"))' \
+'--mode=[Output mode]:MODE:((scaler\:"Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image"
+heatmap\:"Output a heatmap image"
+rows\:"Output the rows of the data"
+columns\:"Output the columns of the data"
+generate-completions\:"Generate shell completion scripts for the CLI. In this mode, almost options will be ignored and output the completion scripts into the directory specified by dest option"))' \
+'-l+[Logging level (trace, debug, info, warn, error)]:LEVEL:(trace debug info warn error)' \
+'--level=[Logging level (trace, debug, info, warn, error)]:LEVEL:(trace debug info warn error)' \
+'-r+[Specify the value range for the input data.]:RANGE:_default' \
+'--range=[Specify the value range for the input data.]:RANGE:_default' \
+'(--row-order --column-order)--order=[The file describing the order of the data to be plotted. Each line should contain a single string that matches the name of the data to be plotted. The triple dash line (---) means the assistant line is drawin here. The # is the comment line. escape the # with \\# if you want to use it as a name. If not provided, the order will be determined by the order of the data in the input files.]:ORDER:_files' \
+'--row-order=[The file describing the order of the rows to be plotted.]:ROW_ORDER:_files' \
+'--column-order=[The file describing the order of the columns to be plotted.]:COLUMN_ORDER:_files' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'-V[Print version]' \
+'--version[Print version]' \
+'::input_file -- Input files containing the data to be plotted. The csv file should contains the row and column header.:_files' \
+&& ret=0
+}
+
+(( $+functions[_heatman_commands] )) ||
+_heatman_commands() {
+    local commands; commands=()
+    _describe -t commands 'heatman commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_heatman" ]; then
+    _heatman "$@"
+else
+    compdef _heatman heatman
+fi

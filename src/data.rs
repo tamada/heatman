@@ -34,16 +34,6 @@ impl<T> Data<T> {
         self.col_headers.pixel_mapping(self.cols(), pixel_size)
     }
 
-    /// Calculates the total height of the output image in pixels.
-    pub fn image_height(&self, pixel_size: usize) -> usize {
-        self.pixel_mapping_row(pixel_size).len()
-    }
-
-    /// Calculates the total width of the output image in pixels.
-    pub fn image_width(&self, pixel_size: usize) -> usize {
-        self.pixel_mapping_col(pixel_size).len()
-    }
-
     /// Returns the size of the data as (number of rows, number of columns).
     pub fn size(&self) -> (usize, usize) {
         (self.rows(), self.cols())
@@ -212,6 +202,7 @@ impl<T> Data<T> {
     }
 }
 
+/// Load data from a CSV file, scaling values to the specified range.
 pub struct DataLoader;
 
 impl DataLoader {

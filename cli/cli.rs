@@ -14,6 +14,9 @@ pub enum Mode {
     Rows,
     /// Output the columns of the data.
     Columns,
+    #[cfg(debug_assertions)]
+    /// Generate shell completion scripts for the CLI. In this mode, almost options will be ignored and output the completion scripts into the directory specified by dest option.
+    GenerateCompletions,
 }
 
 /// Command line arguments for the heatman CLI.
@@ -125,6 +128,8 @@ impl Heatman {
             },
             Mode::Heatmap => input_file_required(self),
             Mode::Rows | Mode::Columns => input_file_required(self),
+            #[cfg(debug_assertions)]
+            Mode::GenerateCompletions => Ok(self),  
         }
     }
 

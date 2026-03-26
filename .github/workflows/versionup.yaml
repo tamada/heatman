@@ -1,0 +1,35 @@
+name: Version Up
+on:
+  push:
+    branches:
+      - 'release/v[0-9]+.[0-9]+.[0-9]**'
+
+jobs:
+  versionup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get branches
+        id: vars
+        run: |
+          echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF##**/v}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Initialize
+        shell: bash
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Version up
+        id: updating_version
+        run:
+          (bash ./.bin/update_version.sh ${{ steps.vars.outputs.tag }} && git commit -a -m "update version to ${{ steps.vars.outputs.tag }}, ready to publish v${{ steps.vars.outputs.tag }}") || true
+
+      - name: Push branch
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.vars.outputs.branch }}

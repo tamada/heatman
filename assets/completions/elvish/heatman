@@ -1,0 +1,43 @@
+
+use builtin;
+use str;
+
+set edit:completion:arg-completer[heatman] = {|@words|
+    fn spaces {|n|
+        builtin:repeat $n ' ' | str:join ''
+    }
+    fn cand {|text desc|
+        edit:complex-candidate $text &display=$text' '(spaces (- 14 (wcswidth $text)))$desc
+    }
+    var command = 'heatman'
+    for word $words[1..-1] {
+        if (str:has-prefix $word '-') {
+            break
+        }
+        set command = $command';'$word
+    }
+    var completions = [
+        &'heatman'= {
+            cand -d 'Destination path for the output image'
+            cand --dest 'Destination path for the output image'
+            cand -a 'Assistant line gap in cells. If 0, no assistant line will be drawn.'
+            cand --assistant-line-gap 'Assistant line gap in cells. If 0, no assistant line will be drawn.'
+            cand -p 'Pixel size of of cells'
+            cand --pixel 'Pixel size of of cells'
+            cand -m 'Output mode'
+            cand --mode 'Output mode'
+            cand -l 'Logging level (trace, debug, info, warn, error)'
+            cand --level 'Logging level (trace, debug, info, warn, error)'
+            cand -r 'Specify the value range for the input data.'
+            cand --range 'Specify the value range for the input data.'
+            cand --order 'The file describing the order of the data to be plotted. Each line should contain a single string that matches the name of the data to be plotted. The triple dash line (---) means the assistant line is drawin here. The # is the comment line. escape the # with \# if you want to use it as a name. If not provided, the order will be determined by the order of the data in the input files.'
+            cand --row-order 'The file describing the order of the rows to be plotted.'
+            cand --column-order 'The file describing the order of the columns to be plotted.'
+            cand -h 'Print help (see more with ''--help'')'
+            cand --help 'Print help (see more with ''--help'')'
+            cand -V 'Print version'
+            cand --version 'Print version'
+        }
+    ]
+    $completions[$command]
+}

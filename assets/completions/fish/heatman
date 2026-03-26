@@ -1,0 +1,18 @@
+complete -c heatman -s d -l dest -d 'Destination path for the output image' -r -F
+complete -c heatman -s a -l assistant-line-gap -d 'Assistant line gap in cells. If 0, no assistant line will be drawn.' -r
+complete -c heatman -s p -l pixel -d 'Pixel size of of cells' -r
+complete -c heatman -s m -l mode -d 'Output mode' -r -f -a "scaler\t'Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image'
+heatmap\t'Output a heatmap image'
+rows\t'Output the rows of the data'
+columns\t'Output the columns of the data'
+complete -c heatman -s l -l level -d 'Logging level (trace, debug, info, warn, error)' -r -f -a "trace\t''
+debug\t''
+info\t''
+warn\t''
+error\t''"
+complete -c heatman -s r -l range -d 'Specify the value range for the input data.' -r
+complete -c heatman -l order -d 'The file describing the order of the data to be plotted. Each line should contain a single string that matches the name of the data to be plotted. The triple dash line (---) means the assistant line is drawin here. The # is the comment line. escape the # with \\# if you want to use it as a name. If not provided, the order will be determined by the order of the data in the input files.' -r -F
+complete -c heatman -l row-order -d 'The file describing the order of the rows to be plotted.' -r -F
+complete -c heatman -l column-order -d 'The file describing the order of the columns to be plotted.' -r -F
+complete -c heatman -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c heatman -s V -l version -d 'Print version'

@@ -1,8 +1,47 @@
+//! Heatman is for generating heatmaps from tabular data.
+//! The library provides core functionality for data processing and heatmap generation, while the CLI handles user input and interaction.
+//! 
+//! ## Examples
+//! 
+//! ### Example 1: Generating a heatmap from a CSV file
+//! 
+//! The simple use case available on `examples/generate_heatmap_from_csv.rs`.
+//! 
+//! ```rust
+//! use heatman::{Heatmap, Data, DataLoader};
+//! use image::{ImageBuffer, Rgba};
+//! 
+//! let data = DataLoader::load("testdata/sample.csv")
+//!     .expect("Failed to load data from CSV");
+//! let context = Heatmap::new(cells, 10);
+//! let cells: Data<Rgba<u8>> = data.into();
+//! let context = Heatmap::new(cells, 10);
+//! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into();
+//! image.save("example1.png")
+//!     .expect("Failed to save heatmap image");
+//! ```
+//! 
+//! ### Example 2: Generating a scaler
+//! 
+//! Generate a scaler image with height of 20 pixels, which can be used as a reference for interpreting the heatmap colors.
+//! The example is available on `examples/generate_scaler.rs`.
+//! 
+//! ```rust
+//! use heatman::{Heatmap, ScalerBuilder};
+//! use image::{ImageBuffer, Rgba};
+//! 
+//! let data = ScalerBuilder::build_with(20);
+//! let context = Heatmap::new(data, 1);
+//! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into();
+//! image.save("scaler.png")
+//!     .expect("Failed to save scaler image");
+//! ```
+//! 
 mod data;
 mod heatmap;
 
 pub use data::{Data, DataLoader, convert};
-pub use heatmap::Order;
+pub use heatmap::{Heatmap, Order};
 use std::{fmt::Display, path::PathBuf};
 
 /// A specialized Result type for heatman operations.

@@ -1,12 +1,25 @@
 [package]
 name = "heatman"
 version = "0.1.0"
+description = "Creating heatmap image from given CSV file"
+authors = [
+    "Haruaki Tamada <tamada@users.noreply.github.com>"
+]
+license-file = "LICENSE"
+repository = "https://github.com/tamada/heatman"
 edition = "2024"
+categories = [
+    "command-line-utilities", "graphics", "visualization"
+]
+keywords = [
+    "heatmap", "csv", "data-visualization",
+]
 
 [dependencies]
 clap = { version = "4.6.0", features = [ "derive" ] }
+clap_complete = "4.6.0"
 csv = "1.4.0"
-env_logger = "0.11.9"
+env_logger = "0.11.10"
 image = "0.25.10"
 log = "0.4.29"
 palette = "0.7.6"
