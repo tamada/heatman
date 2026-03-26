@@ -22,8 +22,8 @@ fn generate_scaler(heatman: Heatman) -> Result<()> {
 
 fn generate_heatmap(heatman: Heatman) -> Result<()> {
     let data = heatman.load_image()?;
-    let mut order = heatman.order(&data)?;
-    order.apply_assistant_line(heatman.assistant_line_gap());
+    let order = heatman.order(&data)?;
+    let order = order.apply_assistant_line(heatman.assistant_line_gap());
     let reordered_data = data.reorder(&order);
     let rgbdata: Data<Rgba<u8>> = reordered_data.into();
     output_image(rgbdata, heatman.pixel(), heatman.dest())
@@ -34,8 +34,8 @@ where
         F: Fn(&Data<f64>) -> Vec<String> 
 {
     let data = heatman.load_image()?;
-    let mut order = heatman.order(&data)?;
-    order.apply_assistant_line(heatman.assistant_line_gap());
+    let order = heatman.order(&data)?;
+    let order = order.apply_assistant_line(heatman.assistant_line_gap());
     let reordered_data = data.reorder(&order);
     let items = mapper(&reordered_data);
     for item in items {
@@ -48,9 +48,8 @@ where
 mod gencomp;
 
 fn rs_main(args: Vec<String>) -> Result<()> {
-    let heatman: Heatman = Parser::try_parse_from(args)
-        .map_err(Error::Clap)
-        .and_then(|h: Heatman| h.validate())?;
+    let heatman: Heatman = Parser::parse_from(args);
+    let heatman = heatman.validate()?;
     match heatman.mode() {
         cli::Mode::Scaler => generate_scaler(heatman),
         cli::Mode::Heatmap => generate_heatmap(heatman),
