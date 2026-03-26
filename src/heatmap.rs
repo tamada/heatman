@@ -33,10 +33,7 @@ impl Heatmap<f64> {
     pub fn to_image(self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         let (pixel, data) = (self.pixel, self.data);
         let data: Data<Rgba<u8>> = data.into();
-        let context = Heatmap {
-            pixel: pixel,
-            data,
-        };
+        let context = Heatmap { pixel, data, };
         context.to_image()
     }
 }
@@ -44,41 +41,38 @@ impl Heatmap<f64> {
 impl Heatmap<Rgba<u8>> {
     pub fn to_image(self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         let (pixel, data) = (self.pixel, self.data);
+        let context = Heatmap { pixel, data, };
+        context.into()
+    }
+}
+
+impl From<Heatmap<f64>> for ImageBuffer<Rgba<u8>, Vec<u8>> {
+    fn from(map: Heatmap<f64>) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        let data: Data<Rgba<u8>> = map.data.convert_with(crate::convert);
         let context = Heatmap {
-            pixel: pixel,
+            pixel: map.pixel,
             data,
         };
         context.into()
     }
 }
 
-impl Into<ImageBuffer<Rgba<u8>, Vec<u8>>> for Heatmap<f64> {
-    fn into(self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        let data: Data<Rgba<u8>> = self.data.convert_with(crate::convert);
-        let context = Heatmap {
-            pixel: self.pixel,
-            data,
-        };
-        context.into()
-    }
-}
-
-impl Into<ImageBuffer<Rgba<u8>, Vec<u8>>> for Heatmap<Rgba<u8>> {
-    fn into(self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        let img_width = self.image_width() as u32;
-        let img_height = self.image_height() as u32;
+impl From<Heatmap<Rgba<u8>>> for ImageBuffer<Rgba<u8>, Vec<u8>> {
+    fn from(map: Heatmap<Rgba<u8>>) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        let img_width = map.image_width() as u32;
+        let img_height = map.image_height() as u32;
         log::info!("Output image size: {}x{}", img_width, img_height);
         let gap_color = Rgba([255, 255, 255, 0]);
         let mut result_image = ImageBuffer::new(img_width, img_height);
 
-        let row_mapping = self.data.pixel_mapping_row(self.pixel);
-        let col_mapping = self.data.pixel_mapping_col(self.pixel);
+        let row_mapping = map.data.pixel_mapping_row(map.pixel);
+        let col_mapping = map.data.pixel_mapping_col(map.pixel);
 
         for (py, row_index) in row_mapping.into_iter().enumerate() {
             for (px, col_index) in col_mapping.iter().enumerate() {
                 let color = match (row_index, *col_index) {
                     (Some(ri), Some(ci)) => 
-                        self.data.cell(ri, ci)
+                        map.data.cell(ri, ci)
                             .copied().unwrap_or(gap_color),
                     _ => gap_color,
                 };
