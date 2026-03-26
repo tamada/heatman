@@ -44,8 +44,13 @@ impl<T> Data<T> {
         self.pixel_mapping_col(pixel_size).len()
     }
 
+    /// Returns the size of the data as (number of rows, number of columns).
+    pub fn size(&self) -> (usize, usize) {
+        (self.rows(), self.cols())
+    }
+
     /// Returns the number of logical rows in the data.
-    pub fn rows(&self) -> usize {
+    fn rows(&self) -> usize {
         if self.row_headers.is_empty() {
             self.cells.len()
         } else {
@@ -54,7 +59,7 @@ impl<T> Data<T> {
     }
 
     /// Returns the number of logical columns in the data.
-    pub fn cols(&self) -> usize {
+    fn cols(&self) -> usize {
         if self.col_headers.is_empty() {
             self.cells.iter()
                 .map(|row| row.len())
@@ -119,7 +124,7 @@ impl<T> Data<T> {
     pub fn convert<U: From<T>>(self) -> Data<U> {
         let cells = self.cells.into_iter()
             .map(|row| row.into_iter()
-                .map(|cell| cell.and_then(|v| Some(v.into())))
+                .map(|cell| cell.map(|v| v.into()))
                 .collect::<Vec<Option<U>>>())
             .collect::<Vec<Vec<Option<U>>>>();
         Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
@@ -129,7 +134,7 @@ impl<T> Data<T> {
     pub fn convert_with<U, F: Fn(T) -> U>(self, f: F) -> Data<U> {
         let cells = self.cells.into_iter()
             .map(|row| row.into_iter()
-                .map(|cell| cell.and_then(|v| Some(f(v))))
+                .map(|cell| cell.map(&f))
                 .collect::<Vec<Option<U>>>())
             .collect::<Vec<Vec<Option<U>>>>();
         Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
@@ -137,8 +142,7 @@ impl<T> Data<T> {
 
     /// Returns true if the data is lower triangular.
     pub fn is_lower_triangular(&self) -> bool {
-        let rows = self.rows();
-        let cols = self.cols();
+        let (rows, cols) = self.size();
         if rows != cols {
             return false;
         }
@@ -154,8 +158,7 @@ impl<T> Data<T> {
 
     /// Returns true if the data is upper triangular.
     pub fn is_upper_triangular(&self) -> bool {
-        let rows = self.rows();
-        let cols = self.cols();
+        let (rows, cols) = self.size();
         if rows != cols {
             return false;
         }
@@ -189,9 +192,7 @@ impl<T> Data<T> {
             for (j, col_name) in filtered_cols.iter().enumerate() {
                 let cell = if is_symmetric {
                     let value = self.cell_of_symmetric(row_name, col_name).cloned();
-                    if is_lower && i < j {
-                        None
-                    } else if is_upper && i > j {
+                    if (is_lower && i < j) || (is_upper && i > j) {
                         None
                     } else {
                         value
@@ -211,6 +212,55 @@ impl<T> Data<T> {
     }
 }
 
+pub struct DataLoader;
+
+impl DataLoader {
+    /// Loads data from the specified path, scaling values to the range [0.0, 1.0].
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Data<f64>> {
+        Self::with(path, &(0.0..=1.0))
+    }
+
+    /// Loads data from the specified path, scaling values to the specified range.
+    pub fn with<P: AsRef<Path>>(path: P, range: &RangeInclusive<f64>) -> Result<Data<f64>> {
+        let path = path.as_ref();
+        if !path.exists() {
+            return Err(Error::FileNotFound(path.to_path_buf()));
+        }
+        let mut rdr = csv::Reader::from_path(path)
+            .map_err(Error::Csv)?;
+        let col_headers = Headers {
+            items: rdr.headers().map_err(Error::Csv)?
+                .iter().skip(1).map(|s| s.to_string()).collect(),
+        };
+        let mut row_headers = Vec::new();
+        let mut cells = Vec::new();
+        let mut errs = Vec::new();
+        for result in rdr.records() {
+            let record = match result {
+                Ok(rec) => rec,
+                Err(e) => {
+                    errs.push(Error::Csv(e));
+                    continue;
+                }
+            };
+            row_headers.push(record.get(0).unwrap_or("").to_string());
+            let row = record.iter().skip(1)
+                .map(|s| {
+                    let value = match s.parse::<f64>() {
+                        Ok(v) => v,
+                        Err(e) => {
+                            errs.push(Error::ParseFloat(s.to_string(), e));
+                            return None;
+                        }
+                    };
+                    Some(clamp_and_scale(value, range))
+                }).collect();
+            cells.push(row);
+        }
+        Ok(Data { row_headers: Headers { items: row_headers }, col_headers, cells })
+    }
+}
+
 impl From<Data<f64>> for Data<Rgba<u8>> {
     fn from(data: Data<f64>) -> Self {
         data.convert_with(convert)
@@ -227,7 +277,7 @@ pub fn convert(value: f64) -> Rgba<u8> {
     Rgba([rgb.red, rgb.green, rgb.blue, 255])
 }
 
-fn get_cell<T>(cells: &Vec<Vec<Option<T>>>, row: usize, col: usize) -> Option<&T> {
+fn get_cell<T>(cells: &[Vec<Option<T>>], row: usize, col: usize) -> Option<&T> {
     cells.get(row)?.get(col)?.as_ref()
 }
 
@@ -292,53 +342,8 @@ impl Headers {
 }
 
 /// Returns true if the string represents an assistant line (three or more dashes).
-pub fn is_assistant_line(s: &str) -> bool {
+fn is_assistant_line(s: &str) -> bool {
     s.len() >= 3 && s.chars().all(|c| c == '-')
-}
-
-/// Loads data from the specified path, scaling values to the specified range.
-pub fn load_with<P: AsRef<Path>>(path: P, range: &RangeInclusive<f64>) -> Result<Data<f64>> {
-    let path = path.as_ref();
-    if !path.exists() {
-        return Err(Error::FileNotFound(path.to_path_buf()));
-    }
-    let mut rdr = csv::Reader::from_path(path)
-        .map_err(Error::Csv)?;
-    let col_headers = Headers {
-        items: rdr.headers().map_err(Error::Csv)?
-            .iter().skip(1).map(|s| s.to_string()).collect(),
-    };
-    let mut row_headers = Vec::new();
-    let mut cells = Vec::new();
-    let mut errs = Vec::new();
-    for result in rdr.records() {
-        let record = match result {
-            Ok(rec) => rec,
-            Err(e) => {
-                errs.push(Error::Csv(e));
-                continue;
-            }
-        };
-        row_headers.push(record.get(0).unwrap_or("").to_string());
-        let row = record.iter().skip(1)
-            .map(|s| {
-                let value = match s.parse::<f64>() {
-                    Ok(v) => v,
-                    Err(e) => {
-                        errs.push(Error::ParseFloat(s.to_string(), e));
-                        return None;
-                    }
-                };
-                Some(clamp_and_scale(value, &range))
-            }).collect();
-        cells.push(row);
-    }
-    Ok(Data { row_headers: Headers { items: row_headers }, col_headers, cells })
-}
-
-/// Loads data from the specified path, scaling values to the range [0.0, 1.0].
-pub fn load<P: AsRef<Path>>(path: P) -> Result<Data<f64>> {
-    load_with(path, &(0.0..=1.0))
 }
 
 /// Normalize the value to the range [0.0, 1.0], clamping values outside the range to the nearest bound.

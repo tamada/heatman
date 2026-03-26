@@ -1,8 +1,8 @@
 mod data;
 mod heatmap;
 
-pub use data::{Data, convert, load, load_with, is_assistant_line};
-pub use heatmap::{Heatmap, Order};
+pub use data::{Data, DataLoader, convert};
+pub use heatmap::Order;
 use std::{fmt::Display, path::PathBuf};
 
 /// A specialized Result type for heatman operations.
@@ -49,5 +49,27 @@ impl Display for Error {
             Error::FileNotFound(path) => write!(f, "{}: File not found", path.display()),
             Error::Csv(e) => write!(f, "CSV error: {}", e),
         }
+    }
+}
+
+/// Generates a scaler image data with the specified height.
+pub struct ScalerBuilder;
+
+impl ScalerBuilder {
+    /// Creates a new `Data` instance with a scaler image with height is 5.
+    /// This method is same as `Data::scaler_with(5)`.
+    pub fn build() -> Data<f64> {
+        Self::build_with(5)
+    }
+
+    /// Creates a new `Data` instance with a scaler image of the specified height.
+    pub fn build_with(height: usize) -> Data<f64> {
+        let range = 0_i32..240_i32;
+        let line = range.into_iter()
+            .map(|i| Some(i as f64 / 240.0))
+            .collect::<Vec<Option<f64>>>();
+        let table = (0..height)
+            .map(|_| line.clone()).collect::<Vec<Vec<_>>>();
+        Data::new(table)
     }
 }

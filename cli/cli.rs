@@ -130,7 +130,7 @@ impl Heatman {
 
     /// Loads the data from the input file.
     pub fn load_image(&self) -> Result<heatman::Data<f64>> {
-        heatman::load_with(&self.input_file.as_ref().unwrap(), &self.range)
+        heatman::DataLoader::with(self.input_file.as_ref().unwrap(), &self.range)
     }
 
     /// Determines the order of rows and columns.

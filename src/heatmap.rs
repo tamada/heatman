@@ -3,11 +3,6 @@ use std::io::{BufRead, BufReader};
 
 use crate::{Error, Result};
 
-/// Represents a heatmap. (Currently a placeholder)
-pub struct Heatmap {
-
-}
-
 /// Represents the order of rows and columns in a heatmap.
 pub enum Order {
     /// Symmetric order where rows and columns are the same.
@@ -92,11 +87,11 @@ fn insert_assistant_lines(items: Vec<String>, gap: usize) -> Vec<String> {
 
 fn load_order_vec<P: AsRef<Path>>(path: P) -> Result<Vec<String>> {
     let file = std::fs::File::open(path)
-        .map_err(|e| Error::Io(e))?;
+        .map_err(Error::Io)?;
     let reader = BufReader::new(file);
     let mut items = Vec::new();
     for line in reader.lines() {
-        let line = line.map_err(|e| Error::Io(e))
+        let line = line.map_err(Error::Io)
             .map(strip_comment)?;
         items.push(line.to_string());
     }

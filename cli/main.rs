@@ -20,7 +20,9 @@ fn output_image(data: Data<Rgba<u8>>, pixel_width: usize, pixel_height: usize, d
     for (py, row_index) in row_mapping.into_iter().enumerate() {
         for (px, col_index) in col_mapping.iter().enumerate() {
             let color = match (row_index, *col_index) {
-                (Some(ri), Some(ci)) => data.cell(ri, ci).map(|c| *c).unwrap_or(gap_color),
+                (Some(ri), Some(ci)) => 
+                    data.cell(ri, ci)
+                        .copied().unwrap_or(gap_color),
                 _ => gap_color,
             };
             result_image.put_pixel(px as u32, py as u32, color);
@@ -28,17 +30,11 @@ fn output_image(data: Data<Rgba<u8>>, pixel_width: usize, pixel_height: usize, d
     }
 
     result_image.save(dest)
-        .map_err(|e| Error::Image(e))
+        .map_err(Error::Image)
 }
 
 fn generate_scaler(heatman: Heatman) -> Result<()> {
-    let range = 0_i32..240_i32;
-    let line = range.into_iter()
-        .map(|i| Some(i as f64 / 240.0))
-        .collect::<Vec<Option<f64>>>();
-    let table = (0..10)
-        .map(|_| line.clone()).collect::<Vec<Vec<_>>>();
-    let data = Data::new(table);
+    let data = heatman::ScalerBuilder::build();
     let rgbdata: Data<Rgba<u8>> = data.into();
     output_image(rgbdata, 1, heatman.pixel(), heatman.dest())
 }
@@ -69,7 +65,7 @@ where
 
 fn rs_main(args: Vec<String>) -> Result<()> {
     let heatman: Heatman = Parser::try_parse_from(args)
-        .map_err(|e| Error::Clap(e))
+        .map_err(Error::Clap)
         .and_then(|h: Heatman| h.validate())?;
     match heatman.mode() {
         cli::Mode::Scaler => generate_scaler(heatman),
