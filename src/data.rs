@@ -169,6 +169,7 @@ impl<T> Data<T> {
         let is_lower = self.is_lower_triangular();
         let is_upper = self.is_upper_triangular();
         let is_symmetric = matches!(order, crate::Order::Symmetric(_));
+        log::debug!("Reordering data with order: is_lower: {is_lower}, is_upper: {is_upper}, is_symmetric: {is_symmetric}");
 
         let row_headers: Vec<String> = order.rows().cloned().collect();
         let col_headers: Vec<String> = order.columns().cloned().collect();
@@ -214,6 +215,7 @@ impl DataLoader {
     /// Loads data from the specified path, scaling values to the specified range.
     pub fn with<P: AsRef<Path>>(path: P, range: &RangeInclusive<f64>) -> Result<Data<f64>> {
         let path = path.as_ref();
+        log::debug!("Loading data from: {} with range: {:?}", path.display(), range);
         if !path.exists() {
             return Err(Error::FileNotFound(path.to_path_buf()));
         }

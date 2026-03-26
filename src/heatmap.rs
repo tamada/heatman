@@ -61,7 +61,7 @@ impl From<Heatmap<Rgba<u8>>> for ImageBuffer<Rgba<u8>, Vec<u8>> {
     fn from(map: Heatmap<Rgba<u8>>) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         let img_width = map.image_width() as u32;
         let img_height = map.image_height() as u32;
-        log::info!("Output image size: {}x{}", img_width, img_height);
+        log::debug!("Converting heatmap to image with pixel size: {} (image size: ({img_width}, {img_height}))", map.pixel);
         let gap_color = Rgba([255, 255, 255, 0]);
         let mut result_image = ImageBuffer::new(img_width, img_height);
 
@@ -138,17 +138,20 @@ impl Order {
     }
 
     /// Applies assistant lines to the order at the specified gap interval.
-    pub fn apply_assistant_line(&mut self, gap: usize) {
+    pub fn apply_assistant_line(self, gap: usize) -> Order {
         if gap == 0 {
-            return;
-        }
-        match self {
-            Order::Symmetric(items) => {
-                *items = insert_assistant_lines(items.clone(), gap);
-            },
-            Order::Asymmetric(rows, cols) => {
-                *rows = insert_assistant_lines(rows.clone(), gap);
-                *cols = insert_assistant_lines(cols.clone(), gap);
+            self
+        } else {
+            match self {
+                Order::Symmetric(items) => {
+                    let new_items = insert_assistant_lines(items, gap);
+                    Order::Symmetric(new_items)
+                },
+                Order::Asymmetric(rows, cols) => {
+                    let new_rows = insert_assistant_lines(rows, gap);
+                    let new_cols = insert_assistant_lines(cols, gap);
+                    Order::Asymmetric(new_rows, new_cols)
+                }
             }
         }
     }

@@ -94,7 +94,13 @@ impl Display for Error {
             Error::Io(e) => write!(f, "IO error: {}", e),
             Error::ParseRange(s, msg) => write!(f, "{s}: Failed to parse range: {}", msg),
             Error::ParseFloat(s, e) => write!(f, "{s}: Failed to parse float: {}", e),
-            Error::Clap(e) => write!(f, "Command line argument error: {}", e),
+            Error::Clap(e) => {
+                if e.kind() == clap::error::ErrorKind::DisplayHelp || e.kind() == clap::error::ErrorKind::DisplayVersion {
+                    write!(f, "{}", e)
+                } else {
+                    write!(f, "Command line argument error: {}", e)
+                }
+            },
             Error::Image(e) => write!(f, "Image error: {}", e),
             Error::InvalidData(msg) => write!(f, "Invalid data: {}", msg),
             Error::FileNotFound(path) => write!(f, "{}: File not found", path.display()),
@@ -115,6 +121,7 @@ impl ScalerBuilder {
 
     /// Creates a new `Data` instance with a scaler image of the specified height.
     pub fn build_with(height: usize) -> Data<f64> {
+        log::debug!("Generating scaler data with height: {}", height);
         let range = 0_i32..240_i32;
         let line = range.into_iter()
             .map(|i| Some(i as f64 / 240.0))
