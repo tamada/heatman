@@ -1,6 +1,6 @@
 [package]
 name = "heatman"
-version = "0.0.1"
+version = "0.1.0"
 description = "Creating heatmap image from given CSV file"
 authors = [
     "Haruaki Tamada <tamada@users.noreply.github.com>"
