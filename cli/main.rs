@@ -51,7 +51,6 @@ fn rs_main(args: Vec<String>) -> Result<()> {
     let heatman: Heatman = Parser::try_parse_from(args)
         .map_err(Error::Clap)
         .and_then(|h: Heatman| h.validate())?;
-    #[cfg(debug_assertions)]
     match heatman.mode() {
         cli::Mode::Scaler => generate_scaler(heatman),
         cli::Mode::Heatmap => generate_heatmap(heatman),
@@ -59,7 +58,6 @@ fn rs_main(args: Vec<String>) -> Result<()> {
         cli::Mode::Columns => generate_items(heatman, |data| data.col_headers()),
         #[cfg(debug_assertions)]
         cli::Mode::GenerateCompletions => {
-            #[cfg(debug_assertions)]
             gencomp::generate("heatman", Path::new("completions"));
             Ok(())
         },
