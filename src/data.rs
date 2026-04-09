@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, path::Path};
+use std::{ops::{Deref, RangeInclusive}, path::Path};
 use image::Rgba;
 use palette::{Hsv, IntoColor, Srgb};
 
@@ -9,9 +9,65 @@ pub struct Data<T> {
     row_headers: Headers,
     col_headers: Headers,
     cells: Vec<Vec<Option<T>>>,
+    layout: Layout,
 }
 
-impl<T> Data<T> {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Layout {
+    /// All elements are stored explicitly, with no assumptions about their values.
+    Dense,
+    /// For upper triangular matrices, only the upper triangle (including diagonal) is stored, and the lower triangle is inferred from it.
+    UpperTriangular,
+    /// For lower triangular matrices, only the lower triangle (including diagonal) is stored, and the upper triangle is inferred from it.
+    LowerTriangular,
+    /// For symmetric matrices, only the lower triangle (including diagonal) is stored, and the upper triangle is inferred from it.
+    Symmetric,
+}
+
+fn find_layout<T: PartialEq>(cells: &[Vec<Option<T>>], rows: usize, cols: usize) -> Layout {
+    let mut is_upper = true;
+    let mut is_lower = true;
+    for r in 0..rows {
+        for c in 0..cols {
+            if let Some(_) = get_cell(cells, r, c) {
+                if c > r {
+                    is_lower = false;
+                }
+            }
+            if let Some(_) = get_cell(cells, c, r) {
+                if c < r {
+                    is_upper = false;
+                }
+            }
+        }
+    }
+    match (is_upper, is_lower) {
+        (true, false)  => Layout::UpperTriangular,
+        (false, true)  => Layout::LowerTriangular,
+        (_, _) => is_symmetic(cells, rows, cols),
+    }
+}
+
+fn is_symmetic<T: PartialEq>(cells: &[Vec<Option<T>>], rows: usize, cols: usize) -> Layout {
+    for r in 0..rows {
+        for c in r..cols {
+            let upper = get_cell(cells, r, c);
+            let lower = get_cell(cells, c, r);
+            // all pairs must be equal (including None) to be symmetric
+            match (upper, lower) {
+                (Some(upper), Some(lower)) => {
+                    if upper != lower {
+                        return Layout::Dense;
+                    }
+                },
+                _ => return Layout::Dense,
+            }
+        }
+    }
+    Layout::Symmetric
+}
+
+impl<T: PartialEq> Data<T> {
     /// Creates a new `Data` instance without headers.
     pub fn new(cells: Vec<Vec<Option<T>>>) -> Self {
         Self::new_with_headers(vec![], vec![], cells)
@@ -19,7 +75,13 @@ impl<T> Data<T> {
 
     /// Creates a new `Data` instance with specified row and column headers.
     pub fn new_with_headers(row_headers: Vec<String>, col_headers: Vec<String>, cells: Vec<Vec<Option<T>>>) -> Self {
-        Data { row_headers: Headers { items: row_headers }, col_headers: Headers { items: col_headers }, cells }
+        let layout = find_layout(&cells, cells.len(), cells.iter().map(|row| row.len()).max().unwrap_or(0));
+        Data {
+            row_headers: Headers { items: row_headers },
+            col_headers: Headers { items: col_headers },
+            cells,
+            layout,
+        }
     }
 
     /// Generates a mapping from pixel rows to data row indices, considering the pixel size and assistant lines.
@@ -32,6 +94,10 @@ impl<T> Data<T> {
     /// Returns a vector where each element is `Some(index)` of the data column, or `None` for a gap (assistant line).
     pub fn pixel_mapping_col(&self, pixel_size: usize) -> Vec<Option<usize>> {
         self.col_headers.pixel_mapping(self.cols(), pixel_size)
+    }
+
+    pub fn layout(&self) -> &Layout {
+        &self.layout
     }
 
     /// Returns the size of the data as (number of rows, number of columns).
@@ -88,8 +154,14 @@ impl<T> Data<T> {
     }
 
     /// Returns the value of the cell at the specified row and column.
+    /// If the layout is symmetric and the cell at (row, col) is not found, it tries to find the cell at (col, row).
     pub fn cell(&self, row: usize, col: usize) -> Option<&T> {
-        get_cell(&self.cells, row, col)
+        let value = get_cell(&self.cells, row, col);
+        if value.is_none() && self.layout == Layout::Symmetric {
+            get_cell(&self.cells, col, row)
+        } else {
+            value
+        }
     }
 
     /// Returns the value of the cell at the specified row and column, considering symmetry.
@@ -100,8 +172,14 @@ impl<T> Data<T> {
     }
 
     /// Returns the value of the cell with the specified row and column names.
+    /// If the layout is symmetric and the cell is not found at (row_name, col_name), it tries to find the cell at (col_name, row_name).
     pub fn cell_of(&self, row_name: &str, col_name: &str) -> Option<&T> {
-        get_cell_of(self, row_name, col_name)
+        let value = get_cell_of(self, row_name, col_name);
+        if value.is_none() && self.layout == Layout::Symmetric {
+            get_cell_of(self, col_name, row_name)
+        } else {
+            value
+        }
     }
 
     /// Returns the value of the cell with the specified row and column names, considering symmetry.
@@ -117,7 +195,7 @@ impl<T> Data<T> {
                 .map(|cell| cell.map(|v| v.into()))
                 .collect::<Vec<Option<U>>>())
             .collect::<Vec<Vec<Option<U>>>>();
-        Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
+        Data { row_headers: self.row_headers, col_headers: self.col_headers, cells, layout: self.layout }
     }
 
     /// Converts the data type using the specified function.
@@ -127,49 +205,15 @@ impl<T> Data<T> {
                 .map(|cell| cell.map(&f))
                 .collect::<Vec<Option<U>>>())
             .collect::<Vec<Vec<Option<U>>>>();
-        Data { row_headers: self.row_headers, col_headers: self.col_headers, cells }
-    }
-
-    /// Returns true if the data is lower triangular.
-    pub fn is_lower_triangular(&self) -> bool {
-        let (rows, cols) = self.size();
-        if rows != cols {
-            return false;
-        }
-        for r in 0..rows {
-            for c in r + 1..cols {
-                if get_cell(&self.cells, r, c).is_some() {
-                    return false;
-                }
-            }
-        }
-        true
-    }
-
-    /// Returns true if the data is upper triangular.
-    pub fn is_upper_triangular(&self) -> bool {
-        let (rows, cols) = self.size();
-        if rows != cols {
-            return false;
-        }
-        for r in 0..rows {
-            for c in 0..r {
-                if get_cell(&self.cells, r, c).is_some() {
-                    return false;
-                }
-            }
-        }
-        true
+        Data { row_headers: self.row_headers, col_headers: self.col_headers, cells, layout: self.layout }
     }
 
     /// Reorders the data based on the specified order.
     pub fn reorder(self, order: &crate::Order) -> Self 
         where T: Clone
     {
-        let is_lower = self.is_lower_triangular();
-        let is_upper = self.is_upper_triangular();
-        let is_symmetric = matches!(order, crate::Order::Symmetric(_));
-        log::debug!("Reordering data with order: is_lower: {is_lower}, is_upper: {is_upper}, is_symmetric: {is_symmetric}");
+        let layout = self.layout();
+        log::debug!("Reordering data with order: layout: {layout:?}");
 
         let row_headers: Vec<String> = order.rows().cloned().collect();
         let col_headers: Vec<String> = order.columns().cloned().collect();
@@ -181,9 +225,9 @@ impl<T> Data<T> {
         for (i, row_name) in filtered_rows.into_iter().enumerate() {
             let mut new_row = Vec::new();
             for (j, col_name) in filtered_cols.iter().enumerate() {
-                let cell = if is_symmetric {
+                let cell = if layout == &Layout::Symmetric {
                     let value = self.cell_of_symmetric(row_name, col_name).cloned();
-                    if (is_lower && i < j) || (is_upper && i > j) {
+                    if (layout == &Layout::LowerTriangular && i < j) || (layout == &Layout::UpperTriangular && i > j) {
                         None
                     } else {
                         value
@@ -199,6 +243,7 @@ impl<T> Data<T> {
             row_headers: Headers { items: row_headers },
             col_headers: Headers { items: col_headers },
             cells: new_cells,
+            layout: layout.clone(),
         }
     }
 }
@@ -219,12 +264,13 @@ impl DataLoader {
         if !path.exists() {
             return Err(Error::FileNotFound(path.to_path_buf()));
         }
-        let mut rdr = csv::Reader::from_path(path)
+        let mut rdr = csv::ReaderBuilder::new()
+            .flexible(true)
+            .from_path(path)
             .map_err(Error::Csv)?;
-        let col_headers = Headers {
-            items: rdr.headers().map_err(Error::Csv)?
-                .iter().skip(1).map(|s| s.to_string()).collect(),
-        };
+        let col_headers = rdr.headers()
+            .map_err(Error::Csv)?
+            .iter().skip(1).map(|s| s.to_string()).collect();
         let mut row_headers = Vec::new();
         let mut cells = Vec::new();
         let mut errs = Vec::new();
@@ -250,7 +296,7 @@ impl DataLoader {
                 }).collect();
             cells.push(row);
         }
-        Ok(Data { row_headers: Headers { items: row_headers }, col_headers, cells })
+        Ok(Data::new_with_headers(row_headers, col_headers, cells))
     }
 }
 
@@ -380,7 +426,7 @@ mod tests {
         let reordered = data.reorder(&order);
         
         // it should still be lower triangular
-        assert!(reordered.is_lower_triangular());
+        assert!(reordered.layout() == &Layout::LowerTriangular);
         assert_eq!(reordered.cell(0, 1), None);
     }
 
@@ -412,7 +458,7 @@ mod tests {
         // [[3.0, None],
         //  [2.0, 1.0]]
         // This is STILL lower triangular!
-        assert!(reordered.is_lower_triangular());
+        assert!(reordered.layout() == &Layout::LowerTriangular);
         assert_eq!(reordered.cell(0, 1), None);
         assert_eq!(reordered.cell(1, 0), Some(&2.0));
     }
@@ -427,8 +473,8 @@ mod tests {
         ];
         let headers = vec!["A".to_string(), "B".to_string(), "C".to_string()];
         let data = Data::new_with_headers(headers.clone(), headers.clone(), cells);
-        assert!(data.is_lower_triangular());
-        assert!(!data.is_upper_triangular());
+        assert!(data.layout() == &Layout::LowerTriangular);
+        assert!(data.layout() != &Layout::UpperTriangular);
 
         // cell(0, 1) should be None if we want to preserve triangularity
         assert_eq!(data.cell(0, 1), None);
@@ -448,6 +494,6 @@ mod tests {
         assert_eq!(data.cols(), 2);
         
         // it should still be lower triangular
-        assert!(data.is_lower_triangular());
+        assert!(data.layout() == &Layout::LowerTriangular);
     }
 }

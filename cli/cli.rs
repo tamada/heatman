@@ -135,7 +135,7 @@ impl Heatman {
     }
 
     /// Determines the order of rows and columns.
-    pub fn order<T>(&self, data: &Data<T>) -> Result<Order> {
+    pub fn order<T: PartialEq>(&self, data: &Data<T>) -> Result<Order> {
         if let Some(order_path) = &self.order {
             Order::load_symmetric(order_path)
         } else if let (Some(row_order_path), Some(col_order_path)) = (&self.row_order, &self.column_order) {
