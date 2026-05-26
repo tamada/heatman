@@ -1,4 +1,5 @@
-use std::{ops::{Deref, RangeInclusive}, path::Path};
+use std::ops::RangeInclusive;
+use std::path::Path;
 use image::Rgba;
 use palette::{Hsv, IntoColor, Srgb};
 
@@ -29,22 +30,21 @@ fn find_layout<T: PartialEq>(cells: &[Vec<Option<T>>], rows: usize, cols: usize)
     let mut is_lower = true;
     for r in 0..rows {
         for c in 0..cols {
-            if let Some(_) = get_cell(cells, r, c) {
-                if c > r {
-                    is_lower = false;
-                }
-            }
-            if let Some(_) = get_cell(cells, c, r) {
-                if c < r {
+            if get_cell(cells, r, c).is_some() {
+                if r > c {
                     is_upper = false;
+                }
+                if r < c {
+                    is_lower = false;
                 }
             }
         }
     }
     match (is_upper, is_lower) {
-        (true, false)  => Layout::UpperTriangular,
-        (false, true)  => Layout::LowerTriangular,
-        (_, _) => is_symmetic(cells, rows, cols),
+        (true, false) => Layout::UpperTriangular,
+        (false, true) => Layout::LowerTriangular,
+        (true, true) => Layout::Symmetric, // Empty or diagonal only is symmetric
+        (false, false) => is_symmetic(cells, rows, cols),
     }
 }
 
@@ -164,28 +164,15 @@ impl<T: PartialEq> Data<T> {
         }
     }
 
-    /// Returns the value of the cell at the specified row and column, considering symmetry.
-    /// If the cell at (row, col) is not found, it tries to find the cell at (col, row).
-    pub fn cell_symmetric(&self, row: usize, col: usize) -> Option<&T> {
-        get_cell(&self.cells, row, col)
-            .or_else(|| get_cell(&self.cells, col, row))
-    }
-
     /// Returns the value of the cell with the specified row and column names.
-    /// If the layout is symmetric and the cell is not found at (row_name, col_name), it tries to find the cell at (col_name, row_name).
+    /// If the layout is symmetric or triangular and the cell is not found at (row_name, col_name), it tries to find the cell at (col_name, row_name).
     pub fn cell_of(&self, row_name: &str, col_name: &str) -> Option<&T> {
         let value = get_cell_of(self, row_name, col_name);
-        if value.is_none() && self.layout == Layout::Symmetric {
+        if value.is_none() && matches!(self.layout, Layout::Symmetric | Layout::UpperTriangular | Layout::LowerTriangular) {
             get_cell_of(self, col_name, row_name)
         } else {
             value
         }
-    }
-
-    /// Returns the value of the cell with the specified row and column names, considering symmetry.
-    pub fn cell_of_symmetric(&self, row_name: &str, col_name: &str) -> Option<&T> {
-        get_cell_of(self, row_name, col_name)
-            .or_else(|| get_cell_of(self, col_name, row_name))
     }
 
     /// Converts the data type to another type that implements `From<T>`.
@@ -212,7 +199,7 @@ impl<T: PartialEq> Data<T> {
     pub fn reorder(self, order: &crate::Order) -> Self 
         where T: Clone
     {
-        let layout = self.layout();
+        let layout = self.layout().clone();
         log::debug!("Reordering data with order: layout: {layout:?}");
 
         let row_headers: Vec<String> = order.rows().cloned().collect();
@@ -225,15 +212,11 @@ impl<T: PartialEq> Data<T> {
         for (i, row_name) in filtered_rows.into_iter().enumerate() {
             let mut new_row = Vec::new();
             for (j, col_name) in filtered_cols.iter().enumerate() {
-                let cell = if layout == &Layout::Symmetric {
-                    let value = self.cell_of_symmetric(row_name, col_name).cloned();
-                    if (layout == &Layout::LowerTriangular && i < j) || (layout == &Layout::UpperTriangular && i > j) {
-                        None
-                    } else {
-                        value
-                    }
-                } else {
-                    self.cell_of(row_name, col_name).cloned()
+                let value = self.cell_of(row_name, col_name).cloned();
+                let cell = match layout {
+                    Layout::UpperTriangular if i > j => None,
+                    Layout::LowerTriangular if i < j => None,
+                    _ => value,
                 };
                 new_row.push(cell);
             }
@@ -243,7 +226,7 @@ impl<T: PartialEq> Data<T> {
             row_headers: Headers { items: row_headers },
             col_headers: Headers { items: col_headers },
             cells: new_cells,
-            layout: layout.clone(),
+            layout,
         }
     }
 }
