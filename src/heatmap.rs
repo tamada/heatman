@@ -11,7 +11,7 @@ pub struct Heatmap<T> {
     data: Data<T>,
 }
 
-impl<T> Heatmap<T> {
+impl<T: PartialEq> Heatmap<T> {
     /// Creates a new Context with the given data and pixel size.
     /// The pixel size determines how many pixels each cell in the heatmap will occupy.
     pub fn new(data: Data<T>, pixel: usize) -> Self {
