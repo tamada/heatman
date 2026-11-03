@@ -31,6 +31,15 @@ Options:
           Logging level (trace, debug, info, warn, error) [default: warn] [possible values: trace, debug, info, warn, error]
   -r, --range <RANGE>
           Specify the value range for the input data. [default: 0-1]
+  -c, --color <COLOR>
+          Color of the heatmap, specified as <NAME>[:<FROM>-<TO>] or <RRGGBB>-<RRGGBB>.
+          full-color: the hue from blue (minimum) to red (maximum).
+          red, green, blue, yellow, cyan, magenta: from white to the color.
+          redblack, greenblack, blueblack, yellowblack, cyanblack, magentablack: from black to the color.
+          gray: from white to black.
+          FROM and TO are the strength (0-255) of the color for the minimum and maximum values (default: 0-255).
+          If FROM is greater than TO, the gradient is reversed (e.g., gray:255-0).
+          RRGGBB-RRGGBB is the gradient between two colors in hex (e.g., ff0000-ffffff). [default: full-color]
       --order <ORDER>
           The file describing the order of the data to be plotted.
           Each line should contain a single string that matches the name of the data to be plotted.
@@ -49,6 +58,10 @@ $ heatman -p 15 -d heatman_with_assistant_line.png -a 4 testdata/sample.csv
 # generate heatman_with_assistant_line.png with assistant lines gapped between 4 cells.
 $ heatman --mode scaler -d scaler.png
 # generate scaler.png, which shows the scaler of colors.
+$ heatman -c gray -d heatman_gray.png testdata/sample.csv
+# generate heatman_gray.png in gray scale (white for the minimum, black for the maximum).
+$ heatman -c 000080-ffff00 -d heatman_navy_yellow.png testdata/sample.csv
+# generate heatman_navy_yellow.png with the gradient from navy (minimum) to yellow (maximum).
 ```
 
 ### 🚶 The results of examples

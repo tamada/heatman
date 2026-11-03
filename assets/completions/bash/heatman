@@ -23,7 +23,7 @@ _heatman() {
 
     case "${cmd}" in
         heatman)
-            opts="-d -a -p -m -l -r -h -V --dest --assistant-line-gap --pixel --mode --level --range --order --row-order --column-order --help --version [INPUT_FILE]"
+            opts="-d -a -p -m -l -r -c -h -V --dest --assistant-line-gap --pixel --mode --level --range --color --order --row-order --column-order --help --version [INPUT_FILE]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -75,6 +75,20 @@ _heatman() {
                     ;;
                 -r)
                     COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=("${cur}")
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o nospace
+                    fi
+                    return 0
+                    ;;
+                -c)
+                    COMPREPLY=("${cur}")
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o nospace
+                    fi
                     return 0
                     ;;
                 --order)
