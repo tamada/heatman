@@ -16,7 +16,8 @@ fn output_image(data: Data<Rgba<u8>>, pixel: usize, dest: &Path) -> Result<()> {
 
 fn generate_scaler(heatman: Heatman) -> Result<()> {
     let data = heatman::ScalerBuilder::build();
-    let rgbdata: Data<Rgba<u8>> = data.into();
+    let color = *heatman.color();
+    let rgbdata: Data<Rgba<u8>> = data.convert_with(|v| color.map(v));
     output_image(rgbdata, heatman.pixel(), heatman.dest())
 }
 
@@ -25,7 +26,8 @@ fn generate_heatmap(heatman: Heatman) -> Result<()> {
     let order = heatman.order(&data)?;
     let order = order.apply_assistant_line(heatman.assistant_line_gap());
     let reordered_data = data.reorder(&order);
-    let rgbdata: Data<Rgba<u8>> = reordered_data.into();
+    let color = *heatman.color();
+    let rgbdata: Data<Rgba<u8>> = reordered_data.convert_with(|v| color.map(v));
     output_image(rgbdata, heatman.pixel(), heatman.dest())
 }
 

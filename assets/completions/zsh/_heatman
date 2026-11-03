@@ -19,8 +19,8 @@ _heatman() {
 '--dest=[Destination path for the output image]:DEST:_files' \
 '-a+[Assistant line gap in cells. If 0, no assistant line will be drawn.]:ASSISTANT_LINE_GAP:_default' \
 '--assistant-line-gap=[Assistant line gap in cells. If 0, no assistant line will be drawn.]:ASSISTANT_LINE_GAP:_default' \
-'-p+[Pixel size of of cells]:PIXEL:_default' \
-'--pixel=[Pixel size of of cells]:PIXEL:_default' \
+'-p+[Pixel size of cells]:PIXEL:_default' \
+'--pixel=[Pixel size of cells]:PIXEL:_default' \
 '-m+[Output mode]:MODE:((scaler\:"Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image"
 heatmap\:"Output a heatmap image"
 rows\:"Output the rows of the data"
@@ -28,20 +28,21 @@ columns\:"Output the columns of the data"))' \
 '--mode=[Output mode]:MODE:((scaler\:"Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image"
 heatmap\:"Output a heatmap image"
 rows\:"Output the rows of the data"
-columns\:"Output the columns of the data"
-generate-completions\:"Generate shell completion scripts for the CLI. In this mode, almost options will be ignored and output the completion scripts into the directory specified by dest option"))' \
+columns\:"Output the columns of the data"))' \
 '-l+[Logging level (trace, debug, info, warn, error)]:LEVEL:(trace debug info warn error)' \
 '--level=[Logging level (trace, debug, info, warn, error)]:LEVEL:(trace debug info warn error)' \
 '-r+[Specify the value range for the input data.]:RANGE:_default' \
 '--range=[Specify the value range for the input data.]:RANGE:_default' \
-'(--row-order --column-order)--order=[The file describing the order of the data to be plotted. Each line should contain a single string that matches the name of the data to be plotted. The triple dash line (---) means the assistant line is drawin here. The # is the comment line. escape the # with \\# if you want to use it as a name. If not provided, the order will be determined by the order of the data in the input files.]:ORDER:_files' \
+'-c+[Color of the heatmap, specified as <NAME>\[\:<FROM>-<TO>\] or <RRGGBB>-<RRGGBB>. full-color\: the hue from blue (minimum) to red (maximum). red, green, blue, yellow, cyan, magenta\: from white to the color. redblack, greenblack, blueblack, yellowblack, cyanblack, magentablack\: from black to the color. gray\: from white to black. FROM and TO are the strength (0-255) of the color for the minimum and maximum values (default\: 0-255). If FROM is greater than TO, the gradient is reversed (e.g., gray\:255-0). RRGGBB-RRGGBB is the gradient between two colors in hex (e.g., ff0000-ffffff).]:COLOR:' \
+'--color=[Color of the heatmap, specified as <NAME>\[\:<FROM>-<TO>\] or <RRGGBB>-<RRGGBB>. full-color\: the hue from blue (minimum) to red (maximum). red, green, blue, yellow, cyan, magenta\: from white to the color. redblack, greenblack, blueblack, yellowblack, cyanblack, magentablack\: from black to the color. gray\: from white to black. FROM and TO are the strength (0-255) of the color for the minimum and maximum values (default\: 0-255). If FROM is greater than TO, the gradient is reversed (e.g., gray\:255-0). RRGGBB-RRGGBB is the gradient between two colors in hex (e.g., ff0000-ffffff).]:COLOR:' \
+'(--row-order --column-order)--order=[The file describing the order of the data to be plotted. Each line should contain a single string that matches the name of the data to be plotted. The triple dash line (---) means the assistant line is drawn here. The # is the comment line. escape the # with \\# if you want to use it as a name. If not provided, the order will be determined by the order of the data in the input files.]:ORDER:_files' \
 '--row-order=[The file describing the order of the rows to be plotted.]:ROW_ORDER:_files' \
 '--column-order=[The file describing the order of the columns to be plotted.]:COLUMN_ORDER:_files' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '-V[Print version]' \
 '--version[Print version]' \
-'::input_file -- Input files containing the data to be plotted. The csv file should contains the row and column header.:_files' \
+'::input_file -- Input files containing the data to be plotted. The csv file should contain the row and column header.:_files' \
 && ret=0
 }
 

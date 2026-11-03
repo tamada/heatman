@@ -46,9 +46,11 @@
 //! let context = Heatmap::new(cells, 10);
 //! let image: ImageBuffer<Rgba<u8>, Vec<u8>> = context.into();
 //! ```
+mod color;
 mod data;
 mod heatmap;
 
+pub use color::{ColorMap, COLOR_NAMES};
 pub use data::{Data, DataLoader, convert};
 pub use heatmap::{Heatmap, Order};
 use std::{fmt::Display, path::PathBuf};
@@ -73,6 +75,8 @@ pub enum Error {
     InvalidData(String),
     /// IO error.
     Io(std::io::Error),
+    /// Error parsing color map.
+    ParseColor(String, String),
     /// Error parsing value range.
     ParseRange(String, String),
     /// Error parsing float.
@@ -89,6 +93,7 @@ impl Display for Error {
                 Ok(())
             },
             Error::Io(e) => write!(f, "IO error: {}", e),
+            Error::ParseColor(s, msg) => write!(f, "{s}: Failed to parse color: {}", msg),
             Error::ParseRange(s, msg) => write!(f, "{s}: Failed to parse range: {}", msg),
             Error::ParseFloat(s, e) => write!(f, "{s}: Failed to parse float: {}", e),
             Error::Clap(e) => {

@@ -1,10 +1,10 @@
 use std::{ops::RangeInclusive, path::{Path, PathBuf}};
 
 use clap::{Parser, ValueEnum};
-use heatman::{Data, Error, Order, Result};
+use heatman::{ColorMap, Data, Error, Order, Result};
 
 /// Output mode for the heatman CLI.
-#[derive(Debug, Parser, ValueEnum, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, ValueEnum, Clone, PartialEq, Eq, Hash)]
 pub enum Mode {
     /// Output a scaler image instead of a heatmap. In this mode, the pixel option will be used as the height of the scaler image.
     Scaler,
@@ -15,6 +15,7 @@ pub enum Mode {
     /// Output the columns of the data.
     Columns,
     #[cfg(debug_assertions)]
+    #[value(hide = true)]
     /// Generate shell completion scripts for the CLI. In this mode, almost options will be ignored and output the completion scripts into the directory specified by dest option.
     GenerateCompletions,
 }
@@ -40,6 +41,17 @@ pub struct Heatman {
 
     #[clap(short, long, default_value = "0-1", help = "Specify the value range for the input data.", value_parser = parse_range)]
     range: RangeInclusive<f64>,
+
+    #[clap(short, long, default_value = "full-color", value_parser = parse_color, value_hint = clap::ValueHint::Other,
+        help = "Color of the heatmap, specified as <NAME>[:<FROM>-<TO>] or <RRGGBB>-<RRGGBB>.
+full-color: the hue from blue (minimum) to red (maximum).
+red, green, blue, yellow, cyan, magenta: from white to the color.
+redblack, greenblack, blueblack, yellowblack, cyanblack, magentablack: from black to the color.
+gray: from white to black.
+FROM and TO are the strength (0-255) of the color for the minimum and maximum values (default: 0-255).
+If FROM is greater than TO, the gradient is reversed (e.g., gray:255-0).
+RRGGBB-RRGGBB is the gradient between two colors in hex (e.g., ff0000-ffffff).")]
+    color: ColorMap,
 
     #[clap(long, conflicts_with_all = ["row_order", "column_order"],
         help = "The file describing the order of the data to be plotted.
@@ -85,6 +97,11 @@ fn parse_range(s: &str) -> std::result::Result<RangeInclusive<f64>, String> {
     }
     
     Ok(start..=end)
+}
+
+fn parse_color(s: &str) -> std::result::Result<ColorMap, String> {
+    s.parse::<ColorMap>()
+        .map_err(|e| e.to_string())
 }
 
 fn init_log(level: &LogLevel) {
@@ -158,6 +175,11 @@ impl Heatman {
     /// Returns the output mode.
     pub fn mode(&self) -> &Mode {
         &self.mode
+    }
+
+    /// Returns the color map of the heatmap.
+    pub fn color(&self) -> &ColorMap {
+        &self.color
     }
 
     /// Returns the assistant line gap.
